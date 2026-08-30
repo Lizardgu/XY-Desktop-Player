@@ -6,6 +6,7 @@ public static class LaunchOptionsParser
     {
         var mode = HostMode.Window;
         string? contentRoot = null;
+        string? capturePath = null;
         var selfTest = false;
 
         for (var index = 0; index < arguments.Count; index++)
@@ -47,6 +48,15 @@ public static class LaunchOptionsParser
                     contentRoot = contentValue;
                     break;
 
+                case "--capture":
+                    if (!TryReadValue(arguments, ref index, out var captureValue))
+                    {
+                        return Failure("--capture 后必须填写 PNG 输出路径。");
+                    }
+
+                    capturePath = captureValue;
+                    break;
+
                 default:
                     return Failure($"未知参数：{argument}");
             }
@@ -54,7 +64,7 @@ public static class LaunchOptionsParser
 
         return new LaunchOptionsParseResult(
             true,
-            new LaunchOptions(mode, contentRoot, selfTest),
+            new LaunchOptions(mode, contentRoot, selfTest, capturePath),
             null);
     }
 

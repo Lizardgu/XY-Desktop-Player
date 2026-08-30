@@ -45,12 +45,12 @@
 
 ## Task 4: Standalone window host (A)
 
-- [ ] Add a failing test for virtual-host URI derivation and content-root normalization.
-- [ ] Implement URI/content-root mapping logic and rerun tests green.
-- [ ] Add the WinForms WebView2 form, local virtual-host mapping, pre-document compatibility shim, and self-test mode.
-- [ ] Restore WebView2, build the solution, and run the non-GUI self-test.
-- [ ] Launch A and verify the visible player, song playback, cover changes, and lyric loading.
-- [ ] Commit the standalone-window milestone.
+- [x] Add a failing test for virtual-host URI derivation and content-root normalization.
+- [x] Implement URI/content-root mapping logic and rerun tests green.
+- [x] Add the WinForms WebView2 form, local virtual-host mapping, pre-document compatibility shim, and self-test mode.
+- [x] Restore WebView2, build the solution, and run the non-GUI self-test.
+- [x] Launch A and verify the visible player, song playback, cover changes, and lyric loading.
+- [x] Commit the standalone-window milestone.
 
 ## Task 5: Desktop host (B)
 

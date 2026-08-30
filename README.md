@@ -34,3 +34,32 @@
 ```powershell
 & '.\tests\ImportReferencePlayer.Tests.ps1'
 ```
+
+## 构建和运行 A
+
+首次还原 WebView2 开发包：
+
+```powershell
+& '.\tools\Invoke-DotNet.ps1' restore '.\NikkiDesktop.sln' --configfile '.\NuGet.Config'
+```
+
+构建与非图形自检：
+
+```powershell
+& '.\tools\Invoke-DotNet.ps1' build '.\NikkiDesktop.sln' --no-restore
+& '.\tools\Run-SelfTest.ps1'
+```
+
+打开普通独立窗口：
+
+```powershell
+& '.\tools\Run-Window.ps1'
+```
+
+自动加载页面、启动一首歌、保存 PNG/DOM 报告并退出：
+
+```powershell
+& '.\tools\Run-CaptureTest.ps1'
+```
+
+验收输出位于 `artifacts/smoke/reference-player.png` 和同名 JSON；该目录是可重复生成的，因此不进入 Git。

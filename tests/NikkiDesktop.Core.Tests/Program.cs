@@ -10,17 +10,24 @@ Run("empty arguments default to window mode", () =>
     Expect.Equal(HostMode.Window, result.Options!.Mode);
     Expect.Equal(null, result.Options.ContentRoot);
     Expect.False(result.Options.SelfTest, "self-test should be disabled by default");
+    Expect.Equal(null, result.Options.CapturePath);
 });
 
 Run("wallpaper content and self-test flags are parsed together", () =>
 {
     var result = LaunchOptionsParser.Parse(
-        ["--mode", "wallpaper", "--content", @"D:\player-pack", "--self-test"]);
+        [
+            "--mode", "wallpaper",
+            "--content", @"D:\player-pack",
+            "--self-test",
+            "--capture", @"D:\captures\player.png"
+        ]);
 
     Expect.True(result.IsSuccess, result.Error ?? "parse failed");
     Expect.Equal(HostMode.Wallpaper, result.Options!.Mode);
     Expect.Equal(@"D:\player-pack", result.Options.ContentRoot);
     Expect.True(result.Options.SelfTest, "self-test flag was ignored");
+    Expect.Equal(@"D:\captures\player.png", result.Options.CapturePath);
 });
 
 Run("unknown mode is rejected with an actionable error", () =>
@@ -77,6 +84,20 @@ Run("a complete content directory is normalized and accepted", () =>
     Expect.True(result.IsValid, result.Error ?? "complete player should be valid");
     Expect.Equal(Path.GetFullPath(directory.Path), result.ResolvedContentRoot);
     Expect.Equal(0, result.MissingEntries.Count);
+});
+
+Run("web content uses a virtual HTTPS origin instead of a file URI", () =>
+{
+    using var directory = new TemporaryDirectory("播放器 content with spaces");
+    directory.CreateCompletePlayerFixture();
+
+    var mapping = WebContentMapping.Create(directory.Path);
+
+    Expect.Equal(Path.GetFullPath(directory.Path), mapping.ResolvedContentRoot);
+    Expect.Equal("https", mapping.StartUri.Scheme);
+    Expect.Equal("nikkidesktop.local", mapping.StartUri.Host);
+    Expect.Equal("/index.html", mapping.StartUri.AbsolutePath);
+    Expect.False(mapping.StartUri.IsFile, "player must not be launched through file://");
 });
 
 Console.WriteLine(failures == 0
@@ -139,16 +160,25 @@ internal static class Expect
 
 internal sealed class TemporaryDirectory : IDisposable
 {
-    public TemporaryDirectory()
+    public TemporaryDirectory(string? leafName = null)
     {
         Path = System.IO.Path.Combine(
             System.IO.Path.GetTempPath(),
             "NikkiDesktopTests",
-            Guid.NewGuid().ToString("N"));
+            $"{Guid.NewGuid():N}-{leafName ?? "fixture"}");
         Directory.CreateDirectory(Path);
     }
 
     public string Path { get; }
+
+    public void CreateCompletePlayerFixture()
+    {
+        File.WriteAllText(System.IO.Path.Combine(Path, "index.html"), "<!doctype html>");
+        Directory.CreateDirectory(System.IO.Path.Combine(Path, "static"));
+        Directory.CreateDirectory(System.IO.Path.Combine(Path, "assets", "covers"));
+        Directory.CreateDirectory(System.IO.Path.Combine(Path, "assets", "audios"));
+        Directory.CreateDirectory(System.IO.Path.Combine(Path, "assets", "lyrics"));
+    }
 
     public void Dispose()
     {

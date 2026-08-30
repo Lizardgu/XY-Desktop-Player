@@ -9,10 +9,10 @@ public enum HostMode
 public sealed record LaunchOptions(
     HostMode Mode,
     string? ContentRoot,
-    bool SelfTest);
+    bool SelfTest,
+    string? CapturePath);
 
 public sealed record LaunchOptionsParseResult(
     bool IsSuccess,
     LaunchOptions? Options,
     string? Error);
-
