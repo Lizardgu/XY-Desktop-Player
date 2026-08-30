@@ -18,9 +18,14 @@ internal sealed class PlayerForm : Form
     private readonly Label _statusLabel;
     private NotifyIcon? _trayIcon;
     private ContextMenuStrip? _trayMenu;
+    private ToolStripMenuItem? _desktopInteractionItem;
+    private DesktopInteractionController? _desktopInteraction;
     private HostMode _currentMode;
     private bool _initialized;
     private bool _captureCompleted;
+    private bool _webViewReady;
+    private bool _desktopInteractionEnabled = true;
+    private bool _interactionFailureReported;
 
     public PlayerForm(
         WebContentMapping mapping,
@@ -107,6 +112,12 @@ internal sealed class PlayerForm : Form
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                 WallpaperEngineShim.Script);
 
+            _webView.CoreWebView2.NavigationStarting += (_, _) =>
+            {
+                _webViewReady = false;
+                _desktopInteraction?.Stop();
+                UpdateDesktopInteractionMenu();
+            };
             _webView.NavigationCompleted += OnNavigationCompleted;
             _webView.Source = _mapping.StartUri;
         }
@@ -127,6 +138,8 @@ internal sealed class PlayerForm : Form
     {
         if (!eventArgs.IsSuccess)
         {
+            _webViewReady = false;
+            _desktopInteraction?.Stop();
             _statusLabel.Text = $"页面加载失败：{eventArgs.WebErrorStatus}";
             CenterStatusLabel();
             if (_capturePath is not null)
@@ -139,9 +152,11 @@ internal sealed class PlayerForm : Form
 
         _statusLabel.Visible = false;
         _webView.Visible = true;
+        _webViewReady = true;
         Text = _currentMode == HostMode.Wallpaper
             ? "Nikki Desktop - 桌面模式"
             : "Nikki Desktop - 独立窗口";
+        UpdateDesktopInteraction(showError: false);
 
         if (_capturePath is not null && !_captureCompleted)
         {
@@ -267,12 +282,17 @@ internal sealed class PlayerForm : Form
         base.WndProc(ref message);
         if (message.Msg == _taskbarCreatedMessage && _currentMode == HostMode.Wallpaper)
         {
-            BeginInvoke(() => TryAttachToDesktop(showError: false));
+            BeginInvoke(() =>
+            {
+                _desktopInteraction?.Stop();
+                TryAttachToDesktop(showError: false);
+            });
         }
     }
 
     protected override void OnFormClosed(FormClosedEventArgs eventArgs)
     {
+        _desktopInteraction?.Dispose();
         _trayIcon?.Dispose();
         _trayMenu?.Dispose();
         _desktopHost.Dispose();
@@ -284,6 +304,12 @@ internal sealed class PlayerForm : Form
         _trayMenu = new ContextMenuStrip();
         _trayMenu.Items.Add("切换到普通窗口", null, (_, _) => SwitchToWindowMode());
         _trayMenu.Items.Add("嵌入桌面图标后方", null, (_, _) => TryAttachToDesktop(showError: true));
+        _desktopInteractionItem = new ToolStripMenuItem("桌面交互：已开启")
+        {
+            Checked = true
+        };
+        _desktopInteractionItem.Click += (_, _) => ToggleDesktopInteraction();
+        _trayMenu.Items.Add(_desktopInteractionItem);
         _trayMenu.Items.Add("重新加载播放器", null, (_, _) => _webView.CoreWebView2?.Reload());
         _trayMenu.Items.Add(new ToolStripSeparator());
         _trayMenu.Items.Add("退出 Nikki Desktop", null, (_, _) => Close());
@@ -305,6 +331,7 @@ internal sealed class PlayerForm : Form
             return;
         }
 
+        _desktopInteraction?.Stop();
         ConfigureWallpaperSurface();
         var screen = Screen.PrimaryScreen ?? Screen.AllScreens.FirstOrDefault();
         if (screen is null)
@@ -325,6 +352,7 @@ internal sealed class PlayerForm : Form
             {
                 _trayIcon.Text = "Nikki Desktop - 桌面模式";
             }
+            UpdateDesktopInteraction(showError);
             return;
         }
 
@@ -363,6 +391,7 @@ internal sealed class PlayerForm : Form
 
     private void SwitchToWindowMode()
     {
+        _desktopInteraction?.Stop();
         _desktopHost.Detach();
         _currentMode = HostMode.Window;
         FormBorderStyle = FormBorderStyle.Sizable;
@@ -386,6 +415,69 @@ internal sealed class PlayerForm : Form
         }
         Show();
         Activate();
+        UpdateDesktopInteractionMenu();
+    }
+
+    private void ToggleDesktopInteraction()
+    {
+        _desktopInteractionEnabled = !_desktopInteractionEnabled;
+        _interactionFailureReported = false;
+        UpdateDesktopInteraction(showError: _desktopInteractionEnabled);
+    }
+
+    private void UpdateDesktopInteraction(bool showError)
+    {
+        var state = new DesktopInteractionState(
+            _currentMode,
+            _desktopInteractionEnabled,
+            _webViewReady,
+            _desktopHost.IsAttached);
+        if (!DesktopInteractionStatePolicy.ShouldRun(state))
+        {
+            _desktopInteraction?.Stop();
+            UpdateDesktopInteractionMenu();
+            return;
+        }
+
+        _desktopInteraction ??= new DesktopInteractionController(
+            Handle,
+            _webView,
+            _desktopHost);
+        if (_desktopInteraction.Start())
+        {
+            _interactionFailureReported = false;
+            UpdateDesktopInteractionMenu();
+            return;
+        }
+
+        UpdateDesktopInteractionMenu();
+        if (!showError || _interactionFailureReported)
+        {
+            return;
+        }
+
+        _interactionFailureReported = true;
+        _trayIcon?.ShowBalloonTip(
+            5000,
+            "Nikki Desktop",
+            $"桌面交互启动失败，鼠标已保留给 Windows。{Environment.NewLine}{_desktopInteraction.LastError}",
+            ToolTipIcon.Warning);
+    }
+
+    private void UpdateDesktopInteractionMenu()
+    {
+        if (_desktopInteractionItem is null)
+        {
+            return;
+        }
+
+        var running = _desktopInteraction?.IsRunning == true;
+        _desktopInteractionItem.Checked = running;
+        _desktopInteractionItem.Text = _desktopInteractionEnabled
+            ? running
+                ? "桌面交互：已开启"
+                : "桌面交互：等待桌面模式"
+            : "桌面交互：已关闭";
     }
 
     private static class NativeMethods
