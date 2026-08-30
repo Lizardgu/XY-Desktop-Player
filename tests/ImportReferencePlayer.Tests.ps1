@@ -43,6 +43,10 @@ try {
         throw 'Manifest must not expose a machine-specific source path.'
     }
 
+    & (Join-Path $repoRoot 'tools\Verify-ContentManifest.ps1') `
+        -ContentRoot $destinationRoot `
+        -ManifestPath $manifestPath
+
     Write-Host 'PASS reference player import copies and hashes every file'
 }
 finally {

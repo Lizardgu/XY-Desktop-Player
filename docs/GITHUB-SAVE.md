@@ -1,0 +1,20 @@
+# GitHub 保存与上传方案
+
+## 是否需要 GitHub Desktop
+
+不需要。项目已经用命令行 Git 建立仓库、分支和里程碑提交。GitHub Desktop 只是可选的图形界面，不提供 Git 本身没有的备份能力。
+
+## 建议保存结构
+
+1. GitHub 仓库保存源代码、测试、文档、导入器、内容清单和发布脚本。
+2. `content/reference-player` 不进入普通 Git 历史；当前约 621 MiB，写入普通 Git 后会永久增加每次克隆的体积。
+3. `artifacts/publish/NikkiDesktop-win-x64` 作为 GitHub Release 附件保存，不提交到源码分支。
+4. 自有、明确获准分发的暖暖素材可另做内容包；大文件使用 Release 或 Git LFS。
+5. 参考播放器中的动画、封面、音乐与歌词不应直接放进公开仓库，除非已经确认相应再发布权利。
+
+## 到时需要用户决定的两项
+
+- 仓库是公开还是私有。
+- 媒体内容是仅本地保存、私有 Release 备份，还是使用 Git LFS。
+
+在这两项明确前，不创建远程仓库、不上传媒体、不执行 `git push`。

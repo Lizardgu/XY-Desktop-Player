@@ -1,0 +1,22 @@
+Nikki Desktop 独立程序
+======================
+
+这个发布目录只包含程序，不附带音乐、封面或歌词。
+
+使用前请在本目录创建：
+  content\reference-player
+
+并把完整网页播放器放进去。最低需要：
+  index.html
+  static\
+  assets\covers\
+  assets\audios\
+  assets\lyrics\
+
+启动-A-普通窗口.cmd：打开普通窗口。
+启动-B-桌面模式.cmd：嵌入桌面图标后方。
+
+B 启动后请从 Windows 右下角托盘的 Nikki Desktop 菜单切换模式、重新加载或退出。
+如果 Wallpaper Engine 正在运行，建议先由用户自己暂停或退出它。
+
+程序不会替换系统文件，不会注入 Explorer，不会自动开机启动。

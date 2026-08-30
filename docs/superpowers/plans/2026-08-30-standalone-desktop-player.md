@@ -62,7 +62,7 @@
 
 ## Task 6: Packaging and handoff
 
-- [ ] Add a publish script for a self-contained win-x64 program folder without copyrighted content.
-- [ ] Run full tests, Release build, self-test, content-manifest verification, and Git large-file audit.
-- [ ] Document A/B launch instructions and the later GitHub/Git LFS/Release choices.
-- [ ] Commit the verified handoff milestone; do not push until the user chooses a GitHub destination and visibility.
+- [x] Add a publish script for a self-contained win-x64 program folder without copyrighted content.
+- [x] Run full tests, Release build, self-test, content-manifest verification, and Git large-file audit.
+- [x] Document A/B launch instructions and the later GitHub/Git LFS/Release choices.
+- [x] Commit the verified handoff milestone; do not push until the user chooses a GitHub destination and visibility.

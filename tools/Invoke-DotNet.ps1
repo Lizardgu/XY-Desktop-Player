@@ -36,4 +36,6 @@ if (-not $dotnet) {
 }
 
 & $dotnet @DotNetArgs
-exit $LASTEXITCODE
+if ($LASTEXITCODE -ne 0) {
+    throw "dotnet 命令失败，退出代码：$LASTEXITCODE"
+}

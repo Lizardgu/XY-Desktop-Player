@@ -88,3 +88,13 @@
 ```
 
 同名 `.host.json` 中的 `desktopAttached: true` 与 `parentClassName: WorkerW` 是桌面嵌入成功的机器可读证据。
+
+## 发布独立程序
+
+```powershell
+& '.\tools\Publish.ps1'
+```
+
+默认输出到 `artifacts/publish/NikkiDesktop-win-x64`。这是 win-x64 自包含程序，目标电脑不需要另装 .NET SDK；仍需要系统的 WebView2 Runtime。发布目录故意不带受版权保护的音乐、封面和歌词，按其中的 `运行说明.txt` 放入内容包即可。
+
+上传策略见 `docs/GITHUB-SAVE.md`。当前仓库只有本地提交，没有远程仓库，也没有执行 push。
