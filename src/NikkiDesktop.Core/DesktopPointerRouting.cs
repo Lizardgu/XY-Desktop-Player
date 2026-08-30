@@ -83,3 +83,49 @@ public static class DesktopPointerRoutePolicy
             : DesktopPointerAction.ForwardAndConsume;
     }
 }
+
+public readonly record struct WebPointerPoint(double X, double Y);
+
+public static class WebPointerCoordinateMapper
+{
+    public static WebPointerPoint ToCssPoint(
+        DesktopPoint screenPoint,
+        DesktopPoint webViewScreenOrigin,
+        double dpiScale)
+    {
+        if (dpiScale <= 0 || double.IsNaN(dpiScale) || double.IsInfinity(dpiScale))
+        {
+            throw new ArgumentOutOfRangeException(nameof(dpiScale));
+        }
+
+        return new WebPointerPoint(
+            (screenPoint.X - webViewScreenOrigin.X) / dpiScale,
+            (screenPoint.Y - webViewScreenOrigin.Y) / dpiScale);
+    }
+}
+
+public sealed record DesktopInteractionState(
+    HostMode Mode,
+    bool UserEnabled,
+    bool WebViewReady,
+    bool DesktopAttached);
+
+public static class DesktopInteractionStatePolicy
+{
+    public static bool ShouldRun(DesktopInteractionState state)
+    {
+        ArgumentNullException.ThrowIfNull(state);
+        return state.Mode == HostMode.Wallpaper &&
+               state.UserEnabled &&
+               state.WebViewReady &&
+               state.DesktopAttached;
+    }
+}
+
+public static class DesktopIconSnapshotPolicy
+{
+    public static bool IsUsable(int nativeItemCount, int rectangleCount) =>
+        nativeItemCount >= 0 &&
+        rectangleCount >= 0 &&
+        (nativeItemCount == 0 || rectangleCount > 0);
+}

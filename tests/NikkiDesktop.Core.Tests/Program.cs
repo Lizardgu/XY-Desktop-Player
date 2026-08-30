@@ -240,6 +240,61 @@ Run("input over another application is never forwarded", () =>
     Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
 });
 
+Run("physical desktop coordinates convert to WebView CSS coordinates", () =>
+{
+    var result = WebPointerCoordinateMapper.ToCssPoint(
+        new DesktopPoint(360, 240),
+        new DesktopPoint(120, 60),
+        dpiScale: 1.5);
+
+    Expect.Equal(new WebPointerPoint(160, 120), result);
+});
+
+Run("invalid DPI scale is rejected before dispatch", () =>
+{
+    Expect.Throws<ArgumentOutOfRangeException>(() =>
+        WebPointerCoordinateMapper.ToCssPoint(
+            new DesktopPoint(100, 100),
+            new DesktopPoint(0, 0),
+            dpiScale: 0));
+});
+
+Run("desktop interaction runs only when every lifecycle gate is ready", () =>
+{
+    var ready = new DesktopInteractionState(
+        HostMode.Wallpaper,
+        UserEnabled: true,
+        WebViewReady: true,
+        DesktopAttached: true);
+
+    Expect.True(DesktopInteractionStatePolicy.ShouldRun(ready), "ready wallpaper interaction did not start");
+    Expect.False(
+        DesktopInteractionStatePolicy.ShouldRun(ready with { Mode = HostMode.Window }),
+        "window mode started desktop interaction");
+    Expect.False(
+        DesktopInteractionStatePolicy.ShouldRun(ready with { UserEnabled = false }),
+        "user-disabled interaction restarted");
+    Expect.False(
+        DesktopInteractionStatePolicy.ShouldRun(ready with { WebViewReady = false }),
+        "interaction started before navigation");
+    Expect.False(
+        DesktopInteractionStatePolicy.ShouldRun(ready with { DesktopAttached = false }),
+        "interaction started before WorkerW attachment");
+});
+
+Run("visible native icons require at least one discovered mask rectangle", () =>
+{
+    Expect.False(
+        DesktopIconSnapshotPolicy.IsUsable(nativeItemCount: 3, rectangleCount: 0),
+        "missing UI Automation rectangles exposed visible desktop icons");
+    Expect.True(
+        DesktopIconSnapshotPolicy.IsUsable(nativeItemCount: 0, rectangleCount: 0),
+        "an empty desktop was treated as an icon-discovery failure");
+    Expect.True(
+        DesktopIconSnapshotPolicy.IsUsable(nativeItemCount: 3, rectangleCount: 3),
+        "complete icon rectangles were rejected");
+});
+
 Console.WriteLine(failures == 0
     ? "All core tests passed."
     : $"{failures} core test(s) failed.");
@@ -299,6 +354,21 @@ internal static class Expect
         {
             throw new InvalidOperationException($"Expected <{actual}> to contain <{expectedPart}>.");
         }
+    }
+
+    public static void Throws<TException>(Action action)
+        where TException : Exception
+    {
+        try
+        {
+            action();
+        }
+        catch (TException)
+        {
+            return;
+        }
+
+        throw new InvalidOperationException($"Expected {typeof(TException).Name} to be thrown.");
     }
 
     public static void SequenceEqual<T>(IReadOnlyList<T> expected, IReadOnlyList<T> actual)
