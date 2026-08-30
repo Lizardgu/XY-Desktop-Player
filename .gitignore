@@ -1,0 +1,23 @@
+# Build and IDE output
+**/bin/
+**/obj/
+.vs/
+.idea/
+*.user
+*.suo
+
+# Project-local dependency/tool caches
+.packages/
+.dotnet/
+
+# Imported or generated runtime content
+content/**
+!content/README.md
+data/
+artifacts/
+logs/
+
+# OS noise
+Thumbs.db
+Desktop.ini
+
