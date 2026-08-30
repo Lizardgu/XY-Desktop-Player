@@ -4,9 +4,9 @@
 
 **Goal:** Let the WorkerW-hosted player receive left-button, hover, and wheel input only through desktop space not covered by Explorer icons, while preserving desktop right-click everywhere.
 
-**Architecture:** Pure routing and geometry rules live in `NikkiDesktop.Core`; Windows-only services in `NikkiDesktop.App` cache desktop icon bounds through UI Automation, observe low-level mouse events, classify the visible surface, and queue ordered CDP mouse input to WebView2. `PlayerForm` owns one controller and starts or stops it with wallpaper attachment, navigation, tray state, Explorer rebuild, and disposal.
+**Architecture:** Pure routing and geometry rules live in `NikkiDesktop.Core`; Windows-only services in `NikkiDesktop.App` cache desktop icon bounds through Microsoft Active Accessibility (MSAA), observe low-level mouse events, classify the visible surface, and queue ordered CDP mouse input to WebView2. `PlayerForm` owns one controller and starts or stops it with wallpaper attachment, navigation, tray state, Explorer rebuild, and disposal.
 
-**Tech Stack:** .NET 8, WinForms, Windows UI Automation, Win32 `WH_MOUSE_LL`, Microsoft Edge WebView2, Chromium DevTools Protocol.
+**Tech Stack:** .NET 8, WinForms, Microsoft Active Accessibility, Win32 `WH_MOUSE_LL`, Microsoft Edge WebView2, Chromium DevTools Protocol.
 
 **Spec:** `docs/superpowers/specs/2026-08-30-desktop-pointer-forwarding-design.md`
 
@@ -109,11 +109,11 @@ git commit -m "feat: define masked desktop pointer routing"
 
 - [ ] **Step 1: Add an app-side compile contract before implementation**
 
-Add an `ItemGroup` with framework references to `UIAutomationClient` and `UIAutomationTypes`, then temporarily reference the wished-for controller API from `PlayerForm` only after Task 3 tests require it. Do not add production behavior in this step.
+Use the `Accessibility` assembly already provided by WinForms; do not add WPF or UI Automation framework references. Reference the wished-for controller API from `PlayerForm` only after Task 3 tests require it. Do not add production behavior in this step.
 
 - [ ] **Step 2: Implement cached Explorer icon-mask discovery**
 
-Locate `SHELLDLL_DefView` and its `SysListView32` desktop view. If the view is hidden, publish a valid empty mask. Otherwise use `AutomationElement.FromHandle` on a dedicated background worker to enumerate visible list items and publish their physical-screen `BoundingRectangle` values as one immutable `DesktopIconMask` snapshot. Refresh at startup and every 750 ms; catch transient `ElementNotAvailableException` and retain fail-safe invalid state.
+Locate `SHELLDLL_DefView` and its `SysListView32` desktop view. If the view is hidden, publish a valid empty mask. Otherwise call `AccessibleObjectFromWindow` on a dedicated background worker, enumerate `IAccessible` children, and publish their physical-screen `accLocation` values as one immutable `DesktopIconMask` snapshot. Cross-check the native ListView item count so visible icons with no accessibility rectangles produce a fail-safe invalid mask. Refresh at startup and every 750 ms; catch transient COM failures and retain fail-safe invalid state.
 
 ```csharp
 public DesktopIconMask Snapshot => Volatile.Read(ref _snapshot);

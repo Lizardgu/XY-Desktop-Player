@@ -28,7 +28,9 @@ $dotnet = Join-Path $PSScriptRoot 'Invoke-DotNet.ps1'
 try {
     & $dotnet restore $appProject `
         --runtime win-x64 `
-        --configfile (Join-Path $repoRoot 'NuGet.Config')
+        --configfile (Join-Path $repoRoot 'NuGet.Config') `
+        --ignore-failed-sources `
+        '-p:NuGetAudit=false'
 
     & $dotnet publish $appProject `
         --configuration Release `

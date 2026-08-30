@@ -41,9 +41,10 @@ applications and system UI.
 
 ### 2. Desktop icon mask
 
-A dedicated background component reads visible desktop icon elements through
-Windows UI Automation and caches their physical-screen bounding rectangles.
-UI Automation work does not run inside the mouse callback. The cache refreshes
+A dedicated background component reads visible `SysListView32` desktop icon
+elements through Microsoft Active Accessibility (MSAA) and caches their
+physical-screen bounding rectangles. Accessibility work does not run inside
+the mouse callback. The cache refreshes
 when wallpaper interaction starts, after Explorer/taskbar recreation, after a
 display or settings change, and periodically at a low frequency so icon moves
 and show/hide changes are picked up.
@@ -52,7 +53,7 @@ The cache is an immutable snapshot. The mouse path only performs point-in-
 rectangle checks. If icon discovery fails or returns an invalid snapshot, the
 component fails safely to Explorer: it does not consume desktop input until a
 valid snapshot is available. This avoids trapping the user during Explorer
-restart or UI Automation failure.
+restart or accessibility-provider failure.
 
 ### 3. Low-level mouse observer
 
@@ -103,7 +104,7 @@ No mouse positions or click history are persisted.
 
 - `DesktopPointerRoutePolicy` — pure, platform-independent routing decisions.
 - `DesktopIconMask` — immutable icon rectangles and point containment.
-- `DesktopIconMaskProvider` — UI Automation discovery and refresh lifecycle.
+- `DesktopIconMaskProvider` — MSAA discovery and refresh lifecycle.
 - `DesktopSurfaceClassifier` — native foreground/desktop surface check.
 - `LowLevelMouseObserver` — installs, owns, and removes `WH_MOUSE_LL`.
 - `WebViewPointerSink` — coordinate conversion, event ordering, and CDP input
@@ -112,7 +113,7 @@ No mouse positions or click history are persisted.
   mode and tray state.
 
 Each component has one responsibility so the timing-sensitive hook callback
-does not acquire UI Automation, WebView, or form lifecycle duties.
+does not acquire accessibility, WebView, or form lifecycle duties.
 
 ## Failure behavior
 
@@ -150,7 +151,7 @@ and publish checks. A real desktop acceptance pass must then verify:
 
 ## Security and compatibility
 
-The implementation uses documented Windows input and UI Automation APIs in
+The implementation uses documented Windows input and Active Accessibility APIs in
 the Nikki Desktop process. It does not inject a DLL into Explorer, modify
 Explorer memory, replace shell files, install a driver, or persist input data.
 The target remains Windows 10/11 x64 with the existing WebView2 runtime
@@ -158,8 +159,8 @@ requirement.
 
 Microsoft documents `WH_MOUSE_LL` as a global low-level mouse observer whose
 callback runs in the installing process, and requires prompt callback handling
-and explicit unhooking. Microsoft also documents UI Automation point and
-bounding-rectangle APIs in physical desktop coordinates, and WebView2's
+and explicit unhooking. Microsoft also documents `AccessibleObjectFromWindow`
+for retrieving an `IAccessible` interface from a window, and WebView2's
 asynchronous DevTools Protocol call used for input dispatch. These constraints
 drive the cached-mask and queued-dispatch design.
 
@@ -167,6 +168,6 @@ Primary references:
 
 - https://learn.microsoft.com/windows/win32/winmsg/lowlevelmouseproc
 - https://learn.microsoft.com/windows/win32/api/winuser/nf-winuser-setwindowshookexw
-- https://learn.microsoft.com/dotnet/api/system.windows.automation.automationelement.frompoint
-- https://learn.microsoft.com/dotnet/api/system.windows.automation.automationelement.automationelementinformation.boundingrectangle
+- https://learn.microsoft.com/windows/win32/api/oleacc/nf-oleacc-accessibleobjectfromwindow
+- https://learn.microsoft.com/windows/win32/winauto/retrieving-an-iaccessible-object
 - https://learn.microsoft.com/dotnet/api/microsoft.web.webview2.core.corewebview2.calldevtoolsprotocolmethodasync

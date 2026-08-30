@@ -26,6 +26,10 @@ internal sealed class DesktopInteractionController : IDisposable
 
     public bool IsRunning => _mouseObserver.IsRunning;
 
+    public bool IconMaskValid => _iconMaskProvider.Snapshot.IsValid;
+
+    public int IconRectangleCount => _iconMaskProvider.Snapshot.Rectangles.Count;
+
     public string? LastError =>
         _mouseObserver.LastError ?? _iconMaskProvider.LastError ?? _pointerSink.LastError;
 

@@ -1,5 +1,5 @@
 using System.Runtime.InteropServices;
-using System.Windows.Automation;
+using Accessibility;
 using NikkiDesktop.Core;
 
 namespace NikkiDesktop.App;
@@ -48,52 +48,19 @@ internal sealed class DesktopIconMaskProvider : IDisposable
                 return;
             }
 
-            var listElement = AutomationElement.FromHandle(listView);
             var nativeItemCount = DesktopListViewLocator.GetItemCount(listView);
-            var itemCondition = new PropertyCondition(
-                AutomationElement.ControlTypeProperty,
-                ControlType.ListItem);
-            var items = listElement.FindAll(TreeScope.Descendants, itemCondition);
-            var rectangles = new List<DesktopRectangle>(items.Count);
-
-            for (var index = 0; index < items.Count; index++)
-            {
-                try
-                {
-                    var item = items[index];
-                    if (item.Current.IsOffscreen)
-                    {
-                        continue;
-                    }
-
-                    var bounds = item.Current.BoundingRectangle;
-                    if (bounds.IsEmpty || bounds.Width <= 0 || bounds.Height <= 0)
-                    {
-                        continue;
-                    }
-
-                    rectangles.Add(new DesktopRectangle(
-                        (int)Math.Floor(bounds.Left),
-                        (int)Math.Floor(bounds.Top),
-                        (int)Math.Ceiling(bounds.Right),
-                        (int)Math.Ceiling(bounds.Bottom)));
-                }
-                catch (ElementNotAvailableException)
-                {
-                    // Explorer can replace an icon element while the snapshot is being read.
-                }
-            }
+            var rectangles = ReadAccessibleIconRectangles(listView);
 
             if (!DesktopIconSnapshotPolicy.IsUsable(nativeItemCount, rectangles.Count))
             {
-                PublishInvalid("Explorer 报告存在桌面图标，但未能读取其遮罩范围。");
+                PublishInvalid("Explorer 报告存在桌面图标，但辅助功能接口未能读取其遮罩范围。");
                 return;
             }
 
             Publish(new DesktopIconMask(true, rectangles));
         }
         catch (Exception exception) when (
-            exception is ElementNotAvailableException or InvalidOperationException or COMException)
+            exception is InvalidOperationException or InvalidCastException or COMException)
         {
             PublishInvalid($"读取桌面图标范围失败：{exception.Message}");
         }
@@ -131,6 +98,85 @@ internal sealed class DesktopIconMaskProvider : IDisposable
     {
         LastError = error;
         Volatile.Write(ref _snapshot, DesktopIconMask.Invalid);
+    }
+
+    private static List<DesktopRectangle> ReadAccessibleIconRectangles(nint listView)
+    {
+        var accessibleId = typeof(IAccessible).GUID;
+        var result = NativeAccessibility.AccessibleObjectFromWindow(
+            listView,
+            NativeAccessibility.ObjIdClient,
+            ref accessibleId,
+            out var accessible);
+        if (result < 0)
+        {
+            Marshal.ThrowExceptionForHR(result);
+        }
+
+        if (accessible is null)
+        {
+            throw new InvalidOperationException("Explorer 桌面图标视图没有提供辅助功能对象。");
+        }
+
+        try
+        {
+            var rectangles = new List<DesktopRectangle>(accessible.accChildCount);
+            for (var childId = 1; childId <= accessible.accChildCount; childId++)
+            {
+                try
+                {
+                    var state = Convert.ToInt32(accessible.get_accState(childId));
+                    if ((state & (NativeAccessibility.StateInvisible | NativeAccessibility.StateOffscreen)) != 0)
+                    {
+                        continue;
+                    }
+
+                    accessible.accLocation(
+                        out var left,
+                        out var top,
+                        out var width,
+                        out var height,
+                        childId);
+                    if (width <= 0 || height <= 0)
+                    {
+                        continue;
+                    }
+
+                    rectangles.Add(new DesktopRectangle(
+                        left,
+                        top,
+                        checked(left + width),
+                        checked(top + height)));
+                }
+                catch (COMException)
+                {
+                    // Explorer can replace one icon while the snapshot is being read.
+                }
+            }
+
+            return rectangles;
+        }
+        finally
+        {
+            if (Marshal.IsComObject(accessible))
+            {
+                _ = Marshal.ReleaseComObject(accessible);
+            }
+        }
+    }
+
+    private static class NativeAccessibility
+    {
+        internal const uint ObjIdClient = unchecked((uint)-4);
+        internal const int StateInvisible = 0x00008000;
+        internal const int StateOffscreen = 0x00010000;
+
+        [DllImport("oleacc.dll")]
+        internal static extern int AccessibleObjectFromWindow(
+            nint window,
+            uint objectId,
+            ref Guid interfaceId,
+            [MarshalAs(UnmanagedType.Interface)] out IAccessible? accessible);
     }
 
     private static class DesktopListViewLocator

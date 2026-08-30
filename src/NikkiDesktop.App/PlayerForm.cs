@@ -38,6 +38,7 @@ internal sealed class PlayerForm : Form
         _requestedMode = requestedMode;
         _currentMode = requestedMode;
         _capturePath = capturePath is null ? null : Path.GetFullPath(capturePath);
+        TraceCapture("form-created");
         _taskbarCreatedMessage = NativeMethods.RegisterWindowMessage("TaskbarCreated");
 
         Text = requestedMode == HostMode.Wallpaper
@@ -85,6 +86,7 @@ internal sealed class PlayerForm : Form
     protected override async void OnShown(EventArgs eventArgs)
     {
         base.OnShown(eventArgs);
+        TraceCapture("form-shown");
         if (_initialized)
         {
             return;
@@ -99,30 +101,40 @@ internal sealed class PlayerForm : Form
         try
         {
             Directory.CreateDirectory(_userDataRoot);
+            TraceCapture("creating-webview-environment");
             var environment = await CoreWebView2Environment.CreateAsync(
                 userDataFolder: _userDataRoot);
+            TraceCapture("webview-environment-created");
             await _webView.EnsureCoreWebView2Async(environment);
+            TraceCapture("webview-initialized");
 
             _webView.CoreWebView2.Settings.AreDevToolsEnabled = true;
             _webView.CoreWebView2.Settings.AreDefaultContextMenusEnabled = true;
+            TraceCapture("webview-settings-configured");
             _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
                 _mapping.VirtualHostName,
                 _mapping.ResolvedContentRoot,
                 CoreWebView2HostResourceAccessKind.Allow);
+            TraceCapture("virtual-host-mapped");
+            TraceCapture("adding-document-script");
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
                 WallpaperEngineShim.Script);
+            TraceCapture("document-script-added");
 
             _webView.CoreWebView2.NavigationStarting += (_, _) =>
             {
+                TraceCapture("navigation-starting");
                 _webViewReady = false;
                 _desktopInteraction?.Stop();
                 UpdateDesktopInteractionMenu();
             };
             _webView.NavigationCompleted += OnNavigationCompleted;
             _webView.Source = _mapping.StartUri;
+            TraceCapture("navigation-requested");
         }
         catch (Exception exception)
         {
+            TraceCapture($"startup-error: {exception}");
             _statusLabel.Text = "启动失败";
             CenterStatusLabel();
             MessageBox.Show(
@@ -136,6 +148,7 @@ internal sealed class PlayerForm : Form
 
     private async void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
     {
+        TraceCapture($"navigation-completed: success={eventArgs.IsSuccess}; status={eventArgs.WebErrorStatus}");
         if (!eventArgs.IsSuccess)
         {
             _webViewReady = false;
@@ -169,6 +182,7 @@ internal sealed class PlayerForm : Form
     {
         try
         {
+            TraceCapture("capture-started");
             var playRequest = JsonSerializer.Serialize(new
             {
                 expression = """
@@ -194,6 +208,7 @@ internal sealed class PlayerForm : Form
             await _webView.CoreWebView2.CallDevToolsProtocolMethodAsync(
                 "Runtime.evaluate",
                 playRequest);
+            TraceCapture("capture-play-request-completed");
             await Task.Delay(2000);
             var captureDirectory = Path.GetDirectoryName(capturePath);
             if (!string.IsNullOrEmpty(captureDirectory))
@@ -207,6 +222,7 @@ internal sealed class PlayerForm : Form
                     CoreWebView2CapturePreviewImageFormat.Png,
                     stream);
             }
+            TraceCapture("capture-image-written");
 
             var domResult = await _webView.CoreWebView2.ExecuteScriptAsync(
                 """
@@ -237,7 +253,11 @@ internal sealed class PlayerForm : Form
                         requestedMode = _requestedMode.ToString().ToLowerInvariant(),
                         currentMode = _currentMode.ToString().ToLowerInvariant(),
                         desktopAttached = _desktopHost.IsAttached,
-                        parentClassName = _desktopHost.AttachedParentClassName
+                        parentClassName = _desktopHost.AttachedParentClassName,
+                        desktopInteractionRunning = _desktopInteraction?.IsRunning == true,
+                        desktopIconMaskValid = _desktopInteraction?.IconMaskValid == true,
+                        desktopIconRectangleCount = _desktopInteraction?.IconRectangleCount ?? 0,
+                        desktopInteractionError = _desktopInteraction?.LastError
                     },
                     new JsonSerializerOptions { WriteIndented = true }));
 
@@ -258,9 +278,11 @@ internal sealed class PlayerForm : Form
                        hasTrackedAudio && audioAdvanced && captureWritten && desktopModeVerified
                 ? 0
                 : 6;
+            TraceCapture($"capture-finished: exit={ExitCode}");
         }
         catch (Exception exception)
         {
+            TraceCapture($"capture-error: {exception}");
             ExitCode = 7;
             var errorPath = Path.ChangeExtension(capturePath, ".error.txt");
             File.WriteAllText(errorPath, exception.ToString());
@@ -275,6 +297,32 @@ internal sealed class PlayerForm : Form
     {
         _statusLabel.Left = Math.Max(0, (ClientSize.Width - _statusLabel.Width) / 2);
         _statusLabel.Top = Math.Max(0, (ClientSize.Height - _statusLabel.Height) / 2);
+    }
+
+    private void TraceCapture(string message)
+    {
+        if (_capturePath is null)
+        {
+            return;
+        }
+
+        try
+        {
+            var tracePath = Path.ChangeExtension(_capturePath, ".trace.log");
+            var directory = Path.GetDirectoryName(tracePath);
+            if (!string.IsNullOrEmpty(directory))
+            {
+                Directory.CreateDirectory(directory);
+            }
+
+            File.AppendAllText(
+                tracePath,
+                $"{DateTimeOffset.Now:O} {message}{Environment.NewLine}");
+        }
+        catch
+        {
+            // Capture diagnostics must never change application behavior.
+        }
     }
 
     protected override void WndProc(ref Message message)
