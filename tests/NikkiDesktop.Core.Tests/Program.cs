@@ -100,6 +100,35 @@ Run("web content uses a virtual HTTPS origin instead of a file URI", () =>
     Expect.False(mapping.StartUri.IsFile, "player must not be launched through file://");
 });
 
+Run("desktop host selects the WorkerW after the shell icon view", () =>
+{
+    var windows = new[]
+    {
+        new DesktopTopLevelWindow((nint)100, "WorkerW", false),
+        new DesktopTopLevelWindow((nint)200, "Progman", false),
+        new DesktopTopLevelWindow((nint)300, "WorkerW", true),
+        new DesktopTopLevelWindow((nint)400, "WorkerW", false),
+        new DesktopTopLevelWindow((nint)500, "ApplicationFrameWindow", false)
+    };
+
+    var selected = DesktopWindowSelector.SelectWorkerW(windows);
+
+    Expect.Equal((nint?)400, selected);
+});
+
+Run("desktop host reports no target when the shell icon view is absent", () =>
+{
+    var windows = new[]
+    {
+        new DesktopTopLevelWindow((nint)100, "Progman", false),
+        new DesktopTopLevelWindow((nint)200, "WorkerW", false)
+    };
+
+    var selected = DesktopWindowSelector.SelectWorkerW(windows);
+
+    Expect.Equal<nint?>(null, selected);
+});
+
 Console.WriteLine(failures == 0
     ? "All core tests passed."
     : $"{failures} core test(s) failed.");

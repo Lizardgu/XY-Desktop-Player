@@ -1,5 +1,8 @@
 [CmdletBinding()]
 param(
+    [ValidateSet('window', 'wallpaper')]
+    [string] $Mode = 'window',
+
     [string] $Content = (Join-Path (Split-Path -Parent $PSScriptRoot) 'content\reference-player'),
 
     [string] $Output = (Join-Path (Split-Path -Parent $PSScriptRoot) 'artifacts\smoke\reference-player.png')
@@ -10,7 +13,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
     --no-restore `
     --project (Join-Path $repoRoot 'src\NikkiDesktop.App\NikkiDesktop.App.csproj') `
     -- `
-    --mode window `
+    --mode $Mode `
     --content $Content `
     --capture $Output
 exit $LASTEXITCODE

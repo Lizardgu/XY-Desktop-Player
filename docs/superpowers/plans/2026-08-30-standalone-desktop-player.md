@@ -54,11 +54,11 @@
 
 ## Task 5: Desktop host (B)
 
-- [ ] Add a failing test for selecting the WorkerW associated with `SHELLDLL_DefView` from an abstract window tree.
-- [ ] Implement the selection logic, then the Win32 Explorer adapter; rerun tests green.
-- [ ] Add wallpaper mode, safe fallback to window mode, tray Exit/Window/Desktop/Reload actions, and Explorer-restart reattachment.
-- [ ] Build and run self-test, then launch B and verify it sits behind desktop icons and exits cleanly.
-- [ ] Commit the desktop-host milestone.
+- [x] Add a failing test for selecting the WorkerW associated with `SHELLDLL_DefView` from an abstract window tree.
+- [x] Implement the selection logic, then the Win32 Explorer adapter; rerun tests green.
+- [x] Add wallpaper mode, safe fallback to window mode, tray Exit/Window/Desktop/Reload actions, and Explorer-restart reattachment.
+- [x] Build and run self-test, then launch B and verify it sits behind desktop icons and exits cleanly.
+- [x] Commit the desktop-host milestone.
 
 ## Task 6: Packaging and handoff
 

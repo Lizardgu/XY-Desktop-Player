@@ -63,3 +63,28 @@
 ```
 
 验收输出位于 `artifacts/smoke/reference-player.png` 和同名 JSON；该目录是可重复生成的，因此不进入 Git。
+
+## 运行 B：桌面图标后方
+
+```powershell
+& '.\tools\Run-Wallpaper.ps1'
+```
+
+启动后播放器窗口不显示在任务栏，而是进入 Windows Explorer 的 `WorkerW` 桌面层。右下角托盘中的 Nikki Desktop 菜单提供：
+
+- 切换到普通窗口
+- 重新嵌入桌面图标后方
+- 重新加载播放器
+- 退出 Nikki Desktop
+
+双击托盘图标也会切回普通窗口。Explorer 重启后，程序会监听任务栏重建消息并尝试重新嵌入；失败时自动回退为普通窗口。
+
+如果 Wallpaper Engine 正在运行，两者可能同时占用桌面层。长期使用 B 前，建议由用户自己暂停或退出 Wallpaper Engine；Nikki Desktop 不会擅自关闭它。
+
+可重复执行短时 B 验收（数秒后自动退出）：
+
+```powershell
+& '.\tools\Run-CaptureTest.ps1' -Mode wallpaper -Output '.\artifacts\smoke\wallpaper-player.png'
+```
+
+同名 `.host.json` 中的 `desktopAttached: true` 与 `parentClassName: WorkerW` 是桌面嵌入成功的机器可读证据。

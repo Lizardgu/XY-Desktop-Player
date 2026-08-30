@@ -1,4 +1,5 @@
 using System.Text.Json;
+using System.Runtime.InteropServices;
 using Microsoft.Web.WebView2.Core;
 using Microsoft.Web.WebView2.WinForms;
 using NikkiDesktop.Core;
@@ -11,8 +12,13 @@ internal sealed class PlayerForm : Form
     private readonly string _userDataRoot;
     private readonly HostMode _requestedMode;
     private readonly string? _capturePath;
+    private readonly DesktopHostService _desktopHost = new();
+    private readonly int _taskbarCreatedMessage;
     private readonly WebView2 _webView;
     private readonly Label _statusLabel;
+    private NotifyIcon? _trayIcon;
+    private ContextMenuStrip? _trayMenu;
+    private HostMode _currentMode;
     private bool _initialized;
     private bool _captureCompleted;
 
@@ -25,13 +31,15 @@ internal sealed class PlayerForm : Form
         _mapping = mapping;
         _userDataRoot = userDataRoot;
         _requestedMode = requestedMode;
+        _currentMode = requestedMode;
         _capturePath = capturePath is null ? null : Path.GetFullPath(capturePath);
+        _taskbarCreatedMessage = NativeMethods.RegisterWindowMessage("TaskbarCreated");
 
         Text = requestedMode == HostMode.Wallpaper
             ? "Nikki Desktop - 桌面模式准备中"
             : "Nikki Desktop - 独立窗口";
         StartPosition = FormStartPosition.CenterScreen;
-        ClientSize = new Size(1280, 720);
+        ClientSize = capturePath is null ? new Size(1280, 720) : new Size(1920, 1080);
         MinimumSize = new Size(960, 540);
         BackColor = Color.Black;
 
@@ -46,7 +54,9 @@ internal sealed class PlayerForm : Form
             BackColor = Color.Black,
             ForeColor = Color.White,
             Font = new Font("Microsoft YaHei UI", 12F),
-            Text = "正在启动独立播放器…",
+            Text = requestedMode == HostMode.Wallpaper
+                ? "正在嵌入桌面播放器…"
+                : "正在启动独立播放器…",
             Anchor = AnchorStyles.None
         };
 
@@ -54,6 +64,15 @@ internal sealed class PlayerForm : Form
         Controls.Add(_statusLabel);
         Resize += (_, _) => CenterStatusLabel();
         CenterStatusLabel();
+
+        if (requestedMode == HostMode.Wallpaper)
+        {
+            ConfigureWallpaperSurface();
+            if (_capturePath is null)
+            {
+                CreateTrayIcon();
+            }
+        }
     }
 
     public int ExitCode { get; private set; }
@@ -67,6 +86,11 @@ internal sealed class PlayerForm : Form
         }
 
         _initialized = true;
+        if (_requestedMode == HostMode.Wallpaper)
+        {
+            TryAttachToDesktop(showError: _capturePath is null);
+        }
+
         try
         {
             Directory.CreateDirectory(_userDataRoot);
@@ -115,7 +139,7 @@ internal sealed class PlayerForm : Form
 
         _statusLabel.Visible = false;
         _webView.Visible = true;
-        Text = _requestedMode == HostMode.Wallpaper
+        Text = _currentMode == HostMode.Wallpaper
             ? "Nikki Desktop - 桌面模式"
             : "Nikki Desktop - 独立窗口";
 
@@ -189,6 +213,19 @@ internal sealed class PlayerForm : Form
             var domPath = Path.ChangeExtension(capturePath, ".json");
             File.WriteAllText(domPath, domResult);
 
+            var hostPath = Path.ChangeExtension(capturePath, ".host.json");
+            File.WriteAllText(
+                hostPath,
+                JsonSerializer.Serialize(
+                    new
+                    {
+                        requestedMode = _requestedMode.ToString().ToLowerInvariant(),
+                        currentMode = _currentMode.ToString().ToLowerInvariant(),
+                        desktopAttached = _desktopHost.IsAttached,
+                        parentClassName = _desktopHost.AttachedParentClassName
+                    },
+                    new JsonSerializerOptions { WriteIndented = true }));
+
             using var document = JsonDocument.Parse(domResult);
             var root = document.RootElement;
             var ready = root.GetProperty("readyState").GetString() == "complete";
@@ -198,9 +235,12 @@ internal sealed class PlayerForm : Form
             var hasTrackedAudio = root.GetProperty("trackedAudioCount").GetInt32() > 0;
             var audioAdvanced = root.GetProperty("maxAudioTime").GetDouble() > 0.25;
             var captureWritten = new FileInfo(capturePath).Length > 0;
+            var desktopModeVerified = _requestedMode != HostMode.Wallpaper ||
+                                      (_desktopHost.IsAttached &&
+                                       _desktopHost.AttachedParentClassName == "WorkerW");
 
             ExitCode = ready && hasApp && hasLoadedImage && shimInstalled &&
-                       hasTrackedAudio && audioAdvanced && captureWritten
+                       hasTrackedAudio && audioAdvanced && captureWritten && desktopModeVerified
                 ? 0
                 : 6;
         }
@@ -220,5 +260,137 @@ internal sealed class PlayerForm : Form
     {
         _statusLabel.Left = Math.Max(0, (ClientSize.Width - _statusLabel.Width) / 2);
         _statusLabel.Top = Math.Max(0, (ClientSize.Height - _statusLabel.Height) / 2);
+    }
+
+    protected override void WndProc(ref Message message)
+    {
+        base.WndProc(ref message);
+        if (message.Msg == _taskbarCreatedMessage && _currentMode == HostMode.Wallpaper)
+        {
+            BeginInvoke(() => TryAttachToDesktop(showError: false));
+        }
+    }
+
+    protected override void OnFormClosed(FormClosedEventArgs eventArgs)
+    {
+        _trayIcon?.Dispose();
+        _trayMenu?.Dispose();
+        _desktopHost.Dispose();
+        base.OnFormClosed(eventArgs);
+    }
+
+    private void CreateTrayIcon()
+    {
+        _trayMenu = new ContextMenuStrip();
+        _trayMenu.Items.Add("切换到普通窗口", null, (_, _) => SwitchToWindowMode());
+        _trayMenu.Items.Add("嵌入桌面图标后方", null, (_, _) => TryAttachToDesktop(showError: true));
+        _trayMenu.Items.Add("重新加载播放器", null, (_, _) => _webView.CoreWebView2?.Reload());
+        _trayMenu.Items.Add(new ToolStripSeparator());
+        _trayMenu.Items.Add("退出 Nikki Desktop", null, (_, _) => Close());
+
+        _trayIcon = new NotifyIcon
+        {
+            ContextMenuStrip = _trayMenu,
+            Icon = SystemIcons.Application,
+            Text = "Nikki Desktop",
+            Visible = true
+        };
+        _trayIcon.DoubleClick += (_, _) => SwitchToWindowMode();
+    }
+
+    private void TryAttachToDesktop(bool showError)
+    {
+        if (IsDisposed)
+        {
+            return;
+        }
+
+        ConfigureWallpaperSurface();
+        var screen = Screen.PrimaryScreen ?? Screen.AllScreens.FirstOrDefault();
+        if (screen is null)
+        {
+            SwitchToWindowMode();
+            if (showError)
+            {
+                MessageBox.Show(this, "未检测到可用显示器。", "Nikki Desktop", MessageBoxButtons.OK, MessageBoxIcon.Error);
+            }
+            return;
+        }
+
+        if (_desktopHost.TryAttach(Handle, screen.Bounds, out var error))
+        {
+            _currentMode = HostMode.Wallpaper;
+            Text = "Nikki Desktop - 桌面模式";
+            if (_trayIcon is not null)
+            {
+                _trayIcon.Text = "Nikki Desktop - 桌面模式";
+            }
+            return;
+        }
+
+        SwitchToWindowMode();
+        if (showError)
+        {
+            MessageBox.Show(
+                this,
+                $"桌面嵌入失败，已回退到普通窗口。\n\n{error}",
+                "Nikki Desktop",
+                MessageBoxButtons.OK,
+                MessageBoxIcon.Warning);
+        }
+        else
+        {
+            _trayIcon?.ShowBalloonTip(
+                5000,
+                "Nikki Desktop",
+                $"Explorer 重启后重新嵌入失败：{error}",
+                ToolTipIcon.Warning);
+        }
+    }
+
+    private void ConfigureWallpaperSurface()
+    {
+        WindowState = FormWindowState.Normal;
+        FormBorderStyle = FormBorderStyle.None;
+        ShowInTaskbar = false;
+        TopMost = false;
+        var screen = Screen.PrimaryScreen ?? Screen.AllScreens.FirstOrDefault();
+        if (screen is not null)
+        {
+            Bounds = screen.Bounds;
+        }
+    }
+
+    private void SwitchToWindowMode()
+    {
+        _desktopHost.Detach();
+        _currentMode = HostMode.Window;
+        FormBorderStyle = FormBorderStyle.Sizable;
+        ShowInTaskbar = true;
+        WindowState = FormWindowState.Normal;
+
+        var screen = Screen.PrimaryScreen ?? Screen.AllScreens.FirstOrDefault();
+        if (screen is not null)
+        {
+            var width = Math.Min(1280, screen.WorkingArea.Width);
+            var height = Math.Min(720, screen.WorkingArea.Height);
+            Left = screen.WorkingArea.Left + (screen.WorkingArea.Width - width) / 2;
+            Top = screen.WorkingArea.Top + (screen.WorkingArea.Height - height) / 2;
+            ClientSize = new Size(width, height);
+        }
+
+        Text = "Nikki Desktop - 独立窗口";
+        if (_trayIcon is not null)
+        {
+            _trayIcon.Text = "Nikki Desktop - 普通窗口";
+        }
+        Show();
+        Activate();
+    }
+
+    private static class NativeMethods
+    {
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+        internal static extern int RegisterWindowMessage(string message);
     }
 }
