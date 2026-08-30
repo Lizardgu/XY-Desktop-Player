@@ -22,18 +22,18 @@
 
 ## Task 1: Repository and build skeleton
 
-- [ ] Add `.gitignore`, `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and solution/project files.
-- [ ] Add repo-local scripts that use the project-local .NET SDK when available.
-- [ ] Initialize Git and commit the approved design and plan.
-- [ ] Run `git status --short` and confirm the initial repository contains no media.
+- [x] Add `.gitignore`, `README.md`, `LICENSE`, `THIRD_PARTY_NOTICES.md`, and solution/project files.
+- [x] Add repo-local scripts that use the project-local .NET SDK when available.
+- [x] Initialize Git and commit the approved design and plan.
+- [x] Run `git status --short` and confirm the initial repository contains no media.
 
 ## Task 2: Options and content validation (TDD)
 
-- [ ] Add a console test that fails because window/wallpaper command-line options are not implemented.
-- [ ] Implement the smallest parser for `--mode`, `--content`, and `--self-test`; rerun the test green.
-- [ ] Add tests that fail for a missing content directory and missing `index.html`/asset folders.
-- [ ] Implement content validation with actionable diagnostics; rerun tests green.
-- [ ] Commit the parser and validation milestone.
+- [x] Add a console test that fails because window/wallpaper command-line options are not implemented.
+- [x] Implement the smallest parser for `--mode`, `--content`, and `--self-test`; rerun the test green.
+- [x] Add tests that fail for a missing content directory and missing `index.html`/asset folders.
+- [x] Implement content validation with actionable diagnostics; rerun tests green.
+- [x] Commit the parser and validation milestone.
 
 ## Task 3: Reproducible content import
 
@@ -66,4 +66,3 @@
 - [ ] Run full tests, Release build, self-test, content-manifest verification, and Git large-file audit.
 - [ ] Document A/B launch instructions and the later GitHub/Git LFS/Release choices.
 - [ ] Commit the verified handoff milestone; do not push until the user chooses a GitHub destination and visibility.
-

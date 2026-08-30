@@ -6,6 +6,13 @@ param(
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
+$env:DOTNET_CLI_HOME = Join-Path $repoRoot '.dotnet-home'
+$env:APPDATA = Join-Path $repoRoot '.dotnet-home\AppData\Roaming'
+$env:LOCALAPPDATA = Join-Path $repoRoot '.dotnet-home\AppData\Local'
+$env:NUGET_PACKAGES = Join-Path $repoRoot '.packages'
+$env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = '1'
+$env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
+$env:DOTNET_NOLOGO = '1'
 $workspaceSdk = Join-Path (Split-Path -Parent (Split-Path -Parent $repoRoot)) 'work\tooling\dotnet8\dotnet.exe'
 $candidates = @(
     $env:NIKKI_DOTNET,
@@ -30,4 +37,3 @@ if (-not $dotnet) {
 
 & $dotnet @DotNetArgs
 exit $LASTEXITCODE
-
