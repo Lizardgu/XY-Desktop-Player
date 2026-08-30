@@ -37,11 +37,11 @@
 
 ## Task 3: Reproducible content import
 
-- [ ] Add a PowerShell import script with source/target safeguards and a generated SHA-256 manifest.
-- [ ] Run the importer against the Steam Workshop item and verify source and destination file counts and byte totals.
-- [ ] Verify that the copied player contains `index.html`, `static`, `assets/covers`, `assets/audios`, and `assets/lyrics`.
-- [ ] Confirm `git status --short` does not list copied media.
-- [ ] Commit the import tooling and documentation.
+- [x] Add a PowerShell import script with source/target safeguards and a generated SHA-256 manifest.
+- [x] Run the importer against the Steam Workshop item and verify source and destination file counts and byte totals.
+- [x] Verify that the copied player contains `index.html`, `static`, `assets/covers`, `assets/audios`, and `assets/lyrics`.
+- [x] Confirm `git status --short` does not list copied media.
+- [x] Commit the import tooling and documentation.
 
 ## Task 4: Standalone window host (A)
 

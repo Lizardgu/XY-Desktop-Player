@@ -19,3 +19,18 @@
 
 仓库内的 `tools/Invoke-DotNet.ps1` 会优先使用 `NIKKI_DOTNET` 指定的 SDK，也能识别本次工作区内的项目级 SDK。
 
+## 导入参考播放器
+
+在 PowerShell 中进入仓库目录后运行：
+
+```powershell
+& '.\tools\Import-ReferencePlayer.ps1' -Source 'E:\SteamLibrary\steamapps\workshop\content\431960\2905017768'
+```
+
+脚本只读取来源，把完整副本写到 `content/reference-player`，并在 `manifests/reference-player.manifest.json` 记录每个文件的大小和 SHA-256。目标已存在时脚本会停止，不会静默覆盖。
+
+导入器自身可用一个微型临时内容包测试：
+
+```powershell
+& '.\tests\ImportReferencePlayer.Tests.ps1'
+```

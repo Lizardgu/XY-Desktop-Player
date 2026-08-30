@@ -1,0 +1,729 @@
+{
+  "schemaVersion": 1,
+  "createdUtc": "2026-08-30T10:47:48.8260207Z",
+  "sourceName": "2905017768",
+  "fileCount": 144,
+  "totalBytes": 651461388.0,
+  "files": [
+    {
+      "path": "asset-manifest.json",
+      "bytes": 374,
+      "sha256": "11478b26d4c2b9a5eeefa826566b135a664f6ca5e4ddb54dab109fc1579fd293"
+    },
+    {
+      "path": "assets/audios/keypress.mp3",
+      "bytes": 3419,
+      "sha256": "c4b9661f4d20f61c31189d4f02a09246738f07948b0e4aed0993abaf5dcde35d"
+    },
+    {
+      "path": "assets/audios/notes.mp3",
+      "bytes": 3626,
+      "sha256": "6baa462b26654a466b8b9e01dcf937512f144fda0debc78072482ceda34e5cfb"
+    },
+    {
+      "path": "assets/covers/Distortion!!.jpg",
+      "bytes": 332948,
+      "sha256": "653c8fff15134b165342585710787547cb5c426a23c86fd374228b7f0a9a5874"
+    },
+    {
+      "path": "assets/covers/Doppelganger _ Re_Re_.jpg",
+      "bytes": 296793,
+      "sha256": "c194da7e6bfeb7d8d840c84c7ac76a83603ebb819be2cfcc605425cf38235ab1"
+    },
+    {
+      "path": "assets/covers/Guitar, Loneliness and Blue Planet.jpg",
+      "bytes": 247296,
+      "sha256": "d3806f14cd5a517908141cfa21b93a28693e1759fcd62b82aabdc36d51f06f37"
+    },
+    {
+      "path": "assets/covers/I'm the Only Ghost.jpg",
+      "bytes": 290010,
+      "sha256": "f964f9a68e6ff657d377c35ee37b44eda4bfe5d68c2166c8f338acb954ace93d"
+    },
+    {
+      "path": "assets/covers/If I could be a constellation.jpg",
+      "bytes": 281568,
+      "sha256": "b11078993af09332e620ebde697860bbf7d478037153679d30dc48c4c5b925bc"
+    },
+    {
+      "path": "assets/covers/Into the Light.jpg",
+      "bytes": 308240,
+      "sha256": "139a0237ecc6d286df9d0667c372847365a3698bc33642cbc5e73f0bec4861e6"
+    },
+    {
+      "path": "assets/covers/Karakara.jpg",
+      "bytes": 278529,
+      "sha256": "321b6a2bb616c8f9c3185b8beebd148275c97258f6f7b97d459984f15c0cae43"
+    },
+    {
+      "path": "assets/covers/Kessoku Band.jpg",
+      "bytes": 295670,
+      "sha256": "9662b8e95ba7a2407afebb725691a6e8b222bf8ca4a79090b5029e1233788924"
+    },
+    {
+      "path": "assets/covers/Kirara Tribute Collection.jpg",
+      "bytes": 219273,
+      "sha256": "097403df8cf53facc7a6548b37da38378879e3952e79f495bd378a26a6b12260"
+    },
+    {
+      "path": "assets/covers/Never forget.jpg",
+      "bytes": 264931,
+      "sha256": "0ff0d2dad3d5e82f3b53f52e568bf77bd356f34bb04536273edf9071603c0115"
+    },
+    {
+      "path": "assets/covers/Re_Kessoku Band.jpg",
+      "bytes": 327285,
+      "sha256": "478445e3b958bef9bd8aef6c0020a27ba9756e219f46942af81554f5ec6ab4dc"
+    },
+    {
+      "path": "assets/covers/Rockn' Roll, Morning Light Falls on You.jpg",
+      "bytes": 216696,
+      "sha256": "27247de717281dc1e746ee0708d0c992c43811c8ab1757c8d50d98090eba3755"
+    },
+    {
+      "path": "assets/covers/Seisyun Complex.jpg",
+      "bytes": 351207,
+      "sha256": "88a20d2bf3c2aa3348db68d2a8d6cd4aa35107d82aabd9e457f205ab4b7818be"
+    },
+    {
+      "path": "assets/covers/Shine as usual _ Now, I'm going from underground.jpg",
+      "bytes": 449106,
+      "sha256": "fbd3fa86f8b43029bc8685eaa00dd9f698d2af67da99c7dd1ccc57d3e8f45f1a"
+    },
+    {
+      "path": "assets/covers/That band.jpg",
+      "bytes": 304893,
+      "sha256": "1a99819ed5e2cc571e30be7fb0226850f9326d52baba92fbc83bc29bb8803c9b"
+    },
+    {
+      "path": "assets/covers/We will.jpg",
+      "bytes": 330107,
+      "sha256": "f1e0a8ea51296de78d61dde1217816a7d4359591f84b539936c416e57af8c665"
+    },
+    {
+      "path": "assets/covers/What is wrong with.jpg",
+      "bytes": 239786,
+      "sha256": "93e5ec930276f8c14a749f739af02e3670ee9b6189226e10cc9225f0c5ad5996"
+    },
+    {
+      "path": "assets/icons/backward.png",
+      "bytes": 10984,
+      "sha256": "b5e6b8b0b415061dbfd13b6652893d3b1d2b85d6491057764bdfe337eac2fe94"
+    },
+    {
+      "path": "assets/icons/darkbackground.png",
+      "bytes": 19475,
+      "sha256": "0a8d161ad2028ebdfd82f7b39e18a5fb60de2165f98d557913ee6bb71cb3afe1"
+    },
+    {
+      "path": "assets/icons/darkclock.png",
+      "bytes": 21329,
+      "sha256": "5b5b94fa0f66a6263dcb6d315f079b67df5888f42f734c6fecfa6c1e96800ac1"
+    },
+    {
+      "path": "assets/icons/darkheadphones.png",
+      "bytes": 22281,
+      "sha256": "1447c804b8b6bf4a7fe7067634161b9546120753d80c5ba4fe41316860f8aa10"
+    },
+    {
+      "path": "assets/icons/darksetting.png",
+      "bytes": 23146,
+      "sha256": "d5cd38ec6a51b13a734c06135668d3b00601bfd949768a2a5b9a32ef93c7ccda"
+    },
+    {
+      "path": "assets/icons/darksound.png",
+      "bytes": 8140,
+      "sha256": "b2a71aef9d1419dfd4952210bf011985e7b8858973c4296e7d27493f3591371d"
+    },
+    {
+      "path": "assets/icons/downBar.png",
+      "bytes": 14875,
+      "sha256": "f7d9cfb2f6db6c4b13f9c799949d26075799f5332410c105ad5fa134c3db6118"
+    },
+    {
+      "path": "assets/icons/forward.png",
+      "bytes": 10950,
+      "sha256": "5f3ea85f48483cb883ce1c28b6a24070a03e87e16806b75839aa1298f9bbbf00"
+    },
+    {
+      "path": "assets/icons/lyricsIcon.png",
+      "bytes": 8153,
+      "sha256": "37b535a0c625a7a5b2fbae1e225bccaef9ec869a8fd8c2c6d5b9a6f3aa98cd8c"
+    },
+    {
+      "path": "assets/icons/pause.png",
+      "bytes": 8171,
+      "sha256": "bb295fc9b35229b4f638d0936851d9436d7850fbc16a933234ae36456376bf95"
+    },
+    {
+      "path": "assets/icons/play.png",
+      "bytes": 6944,
+      "sha256": "4b4b7e2eb0dd50badd89d5a61f5170dcd67f7983a4867198cd5cdeda7ea109de"
+    },
+    {
+      "path": "assets/icons/playlist.png",
+      "bytes": 8725,
+      "sha256": "d3144bf853694071e60aee918a7f7f47bcaca6e0e8478d5cf8337b3ccaf4fc6c"
+    },
+    {
+      "path": "assets/icons/replay.png",
+      "bytes": 17633,
+      "sha256": "3f2739ebd0d56fb21c6b842228304c1cb9e6c8c168d2b32dc57432c301250438"
+    },
+    {
+      "path": "assets/icons/replayToggle.png",
+      "bytes": 14849,
+      "sha256": "d6c324cfe32be23fbeb187c340acdc85cf83df09a1f884264007b82066c89c0b"
+    },
+    {
+      "path": "assets/icons/shuffle.png",
+      "bytes": 12933,
+      "sha256": "064d6296438acc197761093ce64f7bcf1270ce76c07c69aa5364f7b5285ebe18"
+    },
+    {
+      "path": "assets/icons/shuffleToggle.png",
+      "bytes": 14509,
+      "sha256": "610b27a432b91f9a11358685a485546f42fe8709d65bf27d99c53a292e5e9dd7"
+    },
+    {
+      "path": "assets/icons/thumbnail.jpg",
+      "bytes": 35502,
+      "sha256": "55d67966e1ad14e276b8fb87f73e6a06d64bc4297329aa9123fe0d66bf0ea470"
+    },
+    {
+      "path": "assets/icons/upBar.png",
+      "bytes": 14707,
+      "sha256": "2b8730668b00dd82d92a9d565f4de158d84f8d58ffc833675954f5df2d917113"
+    },
+    {
+      "path": "assets/icons/volumeMinus.png",
+      "bytes": 5464,
+      "sha256": "0071960ff5d333aed2547cd9c75e0bf8b81c2c84f81805dc714a2a75853ae443"
+    },
+    {
+      "path": "assets/icons/volumePlus.png",
+      "bytes": 5749,
+      "sha256": "2580fa360c3d6bdf5aa40b828911e09bc4e55dae16c1151935d0f3cf4d3dfbd2"
+    },
+    {
+      "path": "assets/lyrics/original/Blue Spring and Western Sky.lrc",
+      "bytes": 1632,
+      "sha256": "340249d3ea5471ff55cf281d56101490a022d4ecd965a7b73d86763e1bcc5515"
+    },
+    {
+      "path": "assets/lyrics/original/Bundle up your dreams.lrc",
+      "bytes": 2172,
+      "sha256": "858aad9152bf7913a6591fea9c3783d4944b3ac6c61a70501d81d2ba79881361"
+    },
+    {
+      "path": "assets/lyrics/original/Cagayake!GIRLS.lrc",
+      "bytes": 3572,
+      "sha256": "e1c839b49d81d4015a6ca4d3985aa076253d5ad877766eb283494a5e797ec8a6"
+    },
+    {
+      "path": "assets/lyrics/original/Chronostasis.lrc",
+      "bytes": 2072,
+      "sha256": "25136ed0645a6dc3b247fa662989754a2abe7357c9f51545e249b160b5a06ff7"
+    },
+    {
+      "path": "assets/lyrics/original/Daydream café.lrc",
+      "bytes": 3697,
+      "sha256": "01813f529a653a6b6c3db3bd14097757b9ca2add8aeb9054c1fd3a9d2f5e4760"
+    },
+    {
+      "path": "assets/lyrics/original/Distortion!!.lrc",
+      "bytes": 2330,
+      "sha256": "3a5f275882160ec9aa2e77bc06bbf7054c3b026431599123df40878a7cb7c263"
+    },
+    {
+      "path": "assets/lyrics/original/Doppelganger.lrc",
+      "bytes": 1872,
+      "sha256": "ff1cd4d75d022bed433b8ec489c37c14fd4a7ea38609bc3b3f8b90864a968c55"
+    },
+    {
+      "path": "assets/lyrics/original/Flashbacker.lrc",
+      "bytes": 1980,
+      "sha256": "c7346468b28690a7d4d280ae1497f3721865c092b1f11ffb4be3f55551a05b15"
+    },
+    {
+      "path": "assets/lyrics/original/Guitar, Loneliness and Blue Planet.lrc",
+      "bytes": 2086,
+      "sha256": "d8c71d1575955d028ea254147f61ee6d82ed03ed01b7ac340ab48fdb0d25391a"
+    },
+    {
+      "path": "assets/lyrics/original/Hitoribocchi Tokyo.lrc",
+      "bytes": 2099,
+      "sha256": "0d6dfcd1f3216218e055b3f9aaa6d6837b9340799f5b48ee6db3388439dab891"
+    },
+    {
+      "path": "assets/lyrics/original/I can't sing a love song.lrc",
+      "bytes": 1448,
+      "sha256": "f83938aba1cab5c9360c845cf23e7b3df7949ee26becf672eb213466e3ff6158"
+    },
+    {
+      "path": "assets/lyrics/original/I'm the Only Ghost.lrc",
+      "bytes": 1553,
+      "sha256": "fc6149f7c385b4259186aa61b00e44df35726f6ba9a151c304fc3a29c760bea2"
+    },
+    {
+      "path": "assets/lyrics/original/If I could be a constellation.lrc",
+      "bytes": 2020,
+      "sha256": "fd369e26dd2ccde5f5343b62d7e6cfda1131e8cf96bf1316eaf2d5358aa1e334"
+    },
+    {
+      "path": "assets/lyrics/original/Into the Light.lrc",
+      "bytes": 2060,
+      "sha256": "b434ce028961dcb79d8fae0a5dea0d3c0b2044511b641a44506cf4a29aa608f0"
+    },
+    {
+      "path": "assets/lyrics/original/Karakara.lrc",
+      "bytes": 1784,
+      "sha256": "3ac29ad12331a48ce061689197611c61c442c6f848ac81a31569ca8f664cf0e7"
+    },
+    {
+      "path": "assets/lyrics/original/Kill Me no Baby!.lrc",
+      "bytes": 2240,
+      "sha256": "d7d35c82ca7766adf55ac35d2af23ee142af1d4536c3b95fd2d28b2247bd4dea"
+    },
+    {
+      "path": "assets/lyrics/original/Me and the three primary colors.lrc",
+      "bytes": 1632,
+      "sha256": "a1958e3ae8f2ac0bb4ff8d562a38520b899291446fdff71f37d804985accbb75"
+    },
+    {
+      "path": "assets/lyrics/original/milky way.lrc",
+      "bytes": 1501,
+      "sha256": "84b7cacecd13f3d54c7a9ddb7b4e6a5bb62f8536c8cc772c4e3f7cdfaa28cf68"
+    },
+    {
+      "path": "assets/lyrics/original/Never forget.lrc",
+      "bytes": 2268,
+      "sha256": "346dc1c1f1f2d27b7b22c2c32989ec17a659ea36cf093604b189f74017cdd47a"
+    },
+    {
+      "path": "assets/lyrics/original/Now, I'm going from underground.lrc",
+      "bytes": 2883,
+      "sha256": "d8b08d9e4b5bf726259c0a02021dc22e6bfcd735c44febf7ed46e94c38358c16"
+    },
+    {
+      "path": "assets/lyrics/original/Planet.lrc",
+      "bytes": 2045,
+      "sha256": "f9184852a335d405be44113f413a64295c6dc96e3829d5294bdc78fda64c1294"
+    },
+    {
+      "path": "assets/lyrics/original/Re_Re_.lrc",
+      "bytes": 1450,
+      "sha256": "0ad4c251bf2b62ee5a24a5ae055b31db6843bc8b09e3aaf9c16d4781a23e0599"
+    },
+    {
+      "path": "assets/lyrics/original/Rockn' Roll, Morning Light Falls on You.lrc",
+      "bytes": 1793,
+      "sha256": "e4d1ac76126ee5515eee11f802fd957eaf73ce590347033a424f9d9665f14947"
+    },
+    {
+      "path": "assets/lyrics/original/Secret base.lrc",
+      "bytes": 2104,
+      "sha256": "cda9450e92d5e2a145a3dd544243de75efaa898985dceb74572f95679007fbe8"
+    },
+    {
+      "path": "assets/lyrics/original/Seisyun Complex.lrc",
+      "bytes": 1741,
+      "sha256": "7a7268a2b33c2854e616468f4442378db945f32dca7fb749f4f7f7207ef68163"
+    },
+    {
+      "path": "assets/lyrics/original/Shine as usual.lrc",
+      "bytes": 2191,
+      "sha256": "8c62a42d0db98b6011b6da89f3525dc01823abef45a4dc0ea890f2e1f4247916"
+    },
+    {
+      "path": "assets/lyrics/original/SHINY DAYS.lrc",
+      "bytes": 2045,
+      "sha256": "b8b0116df22e5a1fc421ce8d39949c27cdaaa96a950330be1655f24d616b76d6"
+    },
+    {
+      "path": "assets/lyrics/original/That band.lrc",
+      "bytes": 1496,
+      "sha256": "fd1775db203d2d07be138734b1d43f60692cef84aac287597eda4b1be14409ea"
+    },
+    {
+      "path": "assets/lyrics/original/The Little Sea.lrc",
+      "bytes": 1860,
+      "sha256": "1c4c4769f82611724d6e7679b621d59248308a917ef552625f10c7d2cda5637e"
+    },
+    {
+      "path": "assets/lyrics/original/UNITE.lrc",
+      "bytes": 1939,
+      "sha256": "d30b74d6135331448103a60ca9909d71e323846c9b9987d7abe48a82e938ce6f"
+    },
+    {
+      "path": "assets/lyrics/original/What is wrong with.lrc",
+      "bytes": 2317,
+      "sha256": "d6f92558beadbf8a4f51ed9a40504f015d9331e2700d668f6e8ccd6b2148f7de"
+    },
+    {
+      "path": "assets/lyrics/original/Won(_3_)Chu KissMe!.lrc",
+      "bytes": 1952,
+      "sha256": "ec81e0c2838d39bdff43b7b125820ea99f59030c540f4c4ee839297293c8ad01"
+    },
+    {
+      "path": "assets/lyrics/romanized/Blue Spring and Western Sky.lrc",
+      "bytes": 1527,
+      "sha256": "5503af9dcaaa34096adf4a467ff42835337ae2830067c09726fde029e79b9126"
+    },
+    {
+      "path": "assets/lyrics/romanized/Bundle up your dreams.lrc",
+      "bytes": 1941,
+      "sha256": "7d16f14b4a4d691a0ce6e17ad463efa9f3a075083b57b09abbc5e789719c705e"
+    },
+    {
+      "path": "assets/lyrics/romanized/Cagayake!GIRLS.lrc",
+      "bytes": 3267,
+      "sha256": "1b08ead9a2596cdc7d4311fc346475e4e5705e79355f6dfe4e85565e428d6cae"
+    },
+    {
+      "path": "assets/lyrics/romanized/Chronostasis.lrc",
+      "bytes": 1915,
+      "sha256": "04ecf937751a96a218c843d0b4b7782bdd7be8297bd77d3f9e8dbcf47c28c4a3"
+    },
+    {
+      "path": "assets/lyrics/romanized/Daydream café.lrc",
+      "bytes": 3078,
+      "sha256": "606fc3ec74ca5beb8ad54f589a3b28fa257adc0f9f655d2cd3d9ffd7cb58feb6"
+    },
+    {
+      "path": "assets/lyrics/romanized/Distortion!!.lrc",
+      "bytes": 2068,
+      "sha256": "a3f4f51acd7301472c6a35f5de9cf175ea2700156fca07485f7df21e17af764c"
+    },
+    {
+      "path": "assets/lyrics/romanized/Doppelganger.lrc",
+      "bytes": 1767,
+      "sha256": "e323e4f9b20cc7b2c108b0770215c11cf15f9be1ad619d9daa79ed43cbea6307"
+    },
+    {
+      "path": "assets/lyrics/romanized/Flashbacker.lrc",
+      "bytes": 1813,
+      "sha256": "69eeb897c0efad8fe904a377294d8ea2e91fa284e82935de10785a82543c24a4"
+    },
+    {
+      "path": "assets/lyrics/romanized/Guitar, Loneliness and Blue Planet.lrc",
+      "bytes": 1892,
+      "sha256": "27e6c0968c602fe0a0112e1a59232216735506a283dae930357be210a83cb1a0"
+    },
+    {
+      "path": "assets/lyrics/romanized/Hitoribocchi Tokyo.lrc",
+      "bytes": 1913,
+      "sha256": "61cc2447c5c9045b95b3e172777574eaf47756db5c02a06d6f4fabbc6da4b525"
+    },
+    {
+      "path": "assets/lyrics/romanized/I can't sing a love song.lrc",
+      "bytes": 1308,
+      "sha256": "2e1902c8a83d5313273278f7bcaf6025061b72bc5361ec0d7c99ee634cd40eb6"
+    },
+    {
+      "path": "assets/lyrics/romanized/I'm the Only Ghost.lrc",
+      "bytes": 1427,
+      "sha256": "bd0c2a04ae360cf638fc2835508acbf3e1a41eabc06b1ff4cc85fbe7f3b3ae90"
+    },
+    {
+      "path": "assets/lyrics/romanized/If I could be a constellation.lrc",
+      "bytes": 1915,
+      "sha256": "a9aa25d3361eae4d06b6e05d518a2b4b782b109ccb89d8ca957663a92ce77c66"
+    },
+    {
+      "path": "assets/lyrics/romanized/Into the Light.lrc",
+      "bytes": 2021,
+      "sha256": "5e9c0f109e1465eca08d548eca5bdf8b3f16c1bad540fcc2e344c95e89ca34ca"
+    },
+    {
+      "path": "assets/lyrics/romanized/Karakara.lrc",
+      "bytes": 1707,
+      "sha256": "6fb65541b4dd1dc8b8b05184fd3a8d2ab73190935d751b108cd6345c05f1c649"
+    },
+    {
+      "path": "assets/lyrics/romanized/Kill Me no Baby!.lrc",
+      "bytes": 1728,
+      "sha256": "a0bae8741e10685a49d1c30223e7b74a365205cb6456449fab0ac9be3373abfc"
+    },
+    {
+      "path": "assets/lyrics/romanized/Me and the three primary colors.lrc",
+      "bytes": 1517,
+      "sha256": "e94ba8b210041e37f4700d24b5317e3a0cc3bb00bfb85c61ba22344d2155be5a"
+    },
+    {
+      "path": "assets/lyrics/romanized/milky way.lrc",
+      "bytes": 1419,
+      "sha256": "5ac00b8a70e818903351509690b1e6488adce8b701a4cd7562d74446516fcfa4"
+    },
+    {
+      "path": "assets/lyrics/romanized/Never forget.lrc",
+      "bytes": 2094,
+      "sha256": "117f1a63fe7d826fa931902c8bf40aa4a48c39f93b1227716585b6f7e893db2c"
+    },
+    {
+      "path": "assets/lyrics/romanized/Now, I'm going from underground.lrc",
+      "bytes": 2487,
+      "sha256": "953bf5cce5a012686386a5d9d5a8122e8c4ae92d59aecd7a73c166cbc31657f8"
+    },
+    {
+      "path": "assets/lyrics/romanized/Planet.lrc",
+      "bytes": 2004,
+      "sha256": "704a8690038289619e4a93f6bc8f4ce9528574f611db9b8e1536d08efd347a5e"
+    },
+    {
+      "path": "assets/lyrics/romanized/Re_Re_.lrc",
+      "bytes": 1308,
+      "sha256": "93c0ba82316f5b6feb640a6bd5369db99d7deb4866489b76cc8e9f4a5a171d24"
+    },
+    {
+      "path": "assets/lyrics/romanized/Rockn' Roll, Morning Light Falls on You.lrc",
+      "bytes": 1658,
+      "sha256": "e41ab9fe687b684ac83724f7220b3c626c5b8754086eeab5d765f566bbbf2689"
+    },
+    {
+      "path": "assets/lyrics/romanized/Secret base.lrc",
+      "bytes": 1868,
+      "sha256": "373b01d9554910e96f03acbaeee4f5874a66bcf8eb4337d2d938dd3ff2bacf29"
+    },
+    {
+      "path": "assets/lyrics/romanized/Seisyun Complex.lrc",
+      "bytes": 1632,
+      "sha256": "45832aec4db1090ed5e90848935c4f6f8a37c26ec05f5a965d9d28ec530970f7"
+    },
+    {
+      "path": "assets/lyrics/romanized/Shine as usual.lrc",
+      "bytes": 2035,
+      "sha256": "80df92167413f01b1ae7fc54991430b75867618c08ec766c1a5fd9913ab2da24"
+    },
+    {
+      "path": "assets/lyrics/romanized/SHINY DAYS.lrc",
+      "bytes": 1887,
+      "sha256": "2fcd52c06772f7265b5a6b92a14ee502764cb3e65a2b3d4a0d5845a37b81ab2d"
+    },
+    {
+      "path": "assets/lyrics/romanized/That band.lrc",
+      "bytes": 1493,
+      "sha256": "9ec2a9cf16542f3a777212779a90275cb9b1ae5f7c9f2dd1046e77d115f94019"
+    },
+    {
+      "path": "assets/lyrics/romanized/The Little Sea.lrc",
+      "bytes": 1696,
+      "sha256": "af59ad0f41f9dab0020b78a888258b99c815af175bd792128ec81ee044a55464"
+    },
+    {
+      "path": "assets/lyrics/romanized/UNITE.lrc",
+      "bytes": 1750,
+      "sha256": "827113fa780cbfbb88b45f03979a99bedb7496abbbe8d02b77f430eca7ce6d16"
+    },
+    {
+      "path": "assets/lyrics/romanized/What is wrong with.lrc",
+      "bytes": 2047,
+      "sha256": "d623053855f526f8d4dc42132224a2b4eb0b502626787ee5343c9aa663d6fe0b"
+    },
+    {
+      "path": "assets/lyrics/romanized/Won(_3_)Chu KissMe!.lrc",
+      "bytes": 1802,
+      "sha256": "2aa0b4ca14043a353dd72fa5f2acd23f4ca6b86dedf8276ceda6048c70d51305"
+    },
+    {
+      "path": "assets/songs/Blue Spring and Western Sky.flac",
+      "bytes": 30408785,
+      "sha256": "5b6c0283374794a02cc761106f6e34e5fd44ffddc09f6991ed85ce167ede6cb6"
+    },
+    {
+      "path": "assets/songs/Bundle up your dreams.mp3",
+      "bytes": 4849697,
+      "sha256": "89cbc45b4e8ccd4efd583f32a86719a451b81fe31cf71a5a7ac54d15b39b0dfc"
+    },
+    {
+      "path": "assets/songs/Cagayake!GIRLS.mp3",
+      "bytes": 6017495,
+      "sha256": "31f6ef00fe758f6b8a1046adb094b3e40203f6b9e1568264baee95950f428af4"
+    },
+    {
+      "path": "assets/songs/Chronostasis.mp3",
+      "bytes": 4351798,
+      "sha256": "c6b977c2a47f631f855bf67916d5c4e30427f6704917b774885fc35c76962b8a"
+    },
+    {
+      "path": "assets/songs/Daydream café.mp3",
+      "bytes": 5488986,
+      "sha256": "b60921dc5872f032d5649d73ac7154792e548e33aaa8f4842405ac7669e607ec"
+    },
+    {
+      "path": "assets/songs/Distortion!!.flac",
+      "bytes": 28087000,
+      "sha256": "14b61fd279d4b79d82399dc646d57c19d9c293da420327732e4bc52a6b63831f"
+    },
+    {
+      "path": "assets/songs/Doppelganger.mp3",
+      "bytes": 3519158,
+      "sha256": "da2f068887c297a79a8d0ed03db15a251156c34e0ddcc0660470d8e176323299"
+    },
+    {
+      "path": "assets/songs/Flashbacker.flac",
+      "bytes": 34774662,
+      "sha256": "2c00f50cddf6931fd0dbd417e2df6ee55e42634b408cdc4a4c06b5c189a836b6"
+    },
+    {
+      "path": "assets/songs/Guitar, Loneliness and Blue Planet.flac",
+      "bytes": 30168005,
+      "sha256": "c994b10035980a62314214bd4ae2f761a7e1dcc130c85847269b8a620f5f4002"
+    },
+    {
+      "path": "assets/songs/Hitoribocchi tokyo.flac",
+      "bytes": 32379704,
+      "sha256": "cc08b249eec06d25e820fd11a66891516f4f099eb9de11c7ba39e8aad14f528c"
+    },
+    {
+      "path": "assets/songs/I can't sing a love song.flac",
+      "bytes": 25945874,
+      "sha256": "d0fb5935fc022b3fa1ecd9be4663feb8588da4f5da546ff1692dc945e667f1ce"
+    },
+    {
+      "path": "assets/songs/I'm the Only Ghost.flac",
+      "bytes": 23597740,
+      "sha256": "1cd47988935c098b43db204ec54cbfd84f0d5c3e0cb3113152e7b3030c8d4f72"
+    },
+    {
+      "path": "assets/songs/If I could be a constellation.flac",
+      "bytes": 35330371,
+      "sha256": "b522dc9aced278a5076bd78b20072f2349a01179c59766b64dd5bda6cefec335"
+    },
+    {
+      "path": "assets/songs/Into the Light.flac",
+      "bytes": 31223638,
+      "sha256": "f2db9207ddb25f82cf2b255ee635d9bbe9e88eb5ef2fd857e0c92c704ec2927a"
+    },
+    {
+      "path": "assets/songs/Karakara.flac",
+      "bytes": 35319380,
+      "sha256": "d78b445e1db7c3b5e458c4bdf76476dbfad9c014471173d13408f901bf74532f"
+    },
+    {
+      "path": "assets/songs/Kill Me no Baby!.mp3",
+      "bytes": 3681521,
+      "sha256": "9abb3a0e4f61111f449c17b0838b90c4d1bbead6c7c293c39de9b6eed0972b51"
+    },
+    {
+      "path": "assets/songs/Me and the three primary colors.mp3",
+      "bytes": 3523917,
+      "sha256": "f4a77ed0b6a01eee6c344ca29d46563766a91874e7fa85a06113c9548aa47bcf"
+    },
+    {
+      "path": "assets/songs/Milky Way.mp3",
+      "bytes": 5105299,
+      "sha256": "deb64c23d4b038d446011d60e317f8def03a2dd73c0c4886ac81e7bc5ab80159"
+    },
+    {
+      "path": "assets/songs/Never forget.flac",
+      "bytes": 31176185,
+      "sha256": "3974d3fbeb87494d7df6e17f6de36391033d76b105db10374864e124e7e22fbc"
+    },
+    {
+      "path": "assets/songs/Now, I'm going from underground.flac",
+      "bytes": 31273639,
+      "sha256": "f7e3358265b577b1373790dd32cb17b0db6ad307435ec96c8e50173d1d5106af"
+    },
+    {
+      "path": "assets/songs/Planet.mp3",
+      "bytes": 4386127,
+      "sha256": "16b7e2190c2f16fd449bd32db2879f68782a4d56ef0318d275480c301cfe74e4"
+    },
+    {
+      "path": "assets/songs/Re_Re_.mp3",
+      "bytes": 4924315,
+      "sha256": "56a8d4f306b4b9e642fbf75464c14fd9b680cb997de917a1af366a12f383f1b3"
+    },
+    {
+      "path": "assets/songs/Rockn' Roll, Morning Light Falls on You.flac",
+      "bytes": 35742136,
+      "sha256": "9c62b631906c7e66b0b6c52640b2a88ebe7adbdd95aae2199f65d8d2f0bf43b7"
+    },
+    {
+      "path": "assets/songs/Secret Base.flac",
+      "bytes": 31893696,
+      "sha256": "804eca46f61d2662385e203b88d3cada05de42accbc44d54d2573a3e6894b3ab"
+    },
+    {
+      "path": "assets/songs/Seisyun complex.flac",
+      "bytes": 27818314,
+      "sha256": "b2c8a79409852c77e55c856601b51cdeccd1642fff59c11df03c66c54e027b66"
+    },
+    {
+      "path": "assets/songs/Shine as usual.flac",
+      "bytes": 29715726,
+      "sha256": "a094d51d9b547c3e9e077225795ff11efe01c75dbe3373d1bd4d3e173a562912"
+    },
+    {
+      "path": "assets/songs/SHINY DAYS.mp3",
+      "bytes": 6300871,
+      "sha256": "ec1f48d60fdf587989c9c3cd9c2a1f8654b7c8fa1f603778e19758470cbe70cd"
+    },
+    {
+      "path": "assets/songs/That band.flac",
+      "bytes": 29015729,
+      "sha256": "399420d3d5b27b8491f35ad6dc0eae2f4c3c1ac31bbacd821f7cf042743bf520"
+    },
+    {
+      "path": "assets/songs/The Little Sea.flac",
+      "bytes": 27558627,
+      "sha256": "d8e297d12fdcde68c034b474519cefe0f3637f3327292df9cb40729f5c5e8772"
+    },
+    {
+      "path": "assets/songs/UNITE.mp3",
+      "bytes": 3190801,
+      "sha256": "21c0182ea29020534ec65105a267334e3260d16b167da872624f09e397ae1b2d"
+    },
+    {
+      "path": "assets/songs/What is wrong with.flac",
+      "bytes": 30469337,
+      "sha256": "1772411ed968931f3d5d3d6cbcdb4feb1c347bfc0940faecad695440d2654c87"
+    },
+    {
+      "path": "assets/songs/Won(_3_)Chu KissMe!.mp3",
+      "bytes": 6862608,
+      "sha256": "2f98a020cc945c518753691d3be8de07a048c9ec98eacd3c6a2cea62133f12f0"
+    },
+    {
+      "path": "index.html",
+      "bytes": 591,
+      "sha256": "c327de81b8f3774623683d5ae272d3cabab6e3159d764c938490549944514731"
+    },
+    {
+      "path": "preview.gif",
+      "bytes": 1042305,
+      "sha256": "72ae823be531bb2c1f75700a887092ad7484cd7e5e758f6965f4484f1caed5f0"
+    },
+    {
+      "path": "project.json",
+      "bytes": 10008,
+      "sha256": "66e9aa899d394693324ee5d72ff9bcf756ab434637b1e01e17060565008f3e84"
+    },
+    {
+      "path": "static/css/main.9e8129c1.css",
+      "bytes": 7938,
+      "sha256": "2071126d1a7a99b7db4382dd925c08c47828f4cf46b637df1dc7c5d80859ac58"
+    },
+    {
+      "path": "static/css/main.9e8129c1.css.map",
+      "bytes": 8269,
+      "sha256": "63fb19f84bb651fa7bbecc41b05737044c7c35047115b138891d44610455bad1"
+    },
+    {
+      "path": "static/js/main.b3270965.js",
+      "bytes": 214696,
+      "sha256": "dad62a5957c8854d6147e5d75c7db09e03e64cee160e97278a4c4700db11548b"
+    },
+    {
+      "path": "static/js/main.b3270965.js.LICENSE.txt",
+      "bytes": 971,
+      "sha256": "bc83aaff43d3ef9301331bbfeaacc4d2d8549dfc9029f786bd6abdd32363b020"
+    },
+    {
+      "path": "static/js/main.b3270965.js.map",
+      "bytes": 623375,
+      "sha256": "3bbe5c967b33251da9785189ed430d84ac9c46f8cd86f4ca62120d902c5c9767"
+    }
+  ]
+}
