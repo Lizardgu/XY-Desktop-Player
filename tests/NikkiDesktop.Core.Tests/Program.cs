@@ -129,11 +129,135 @@ Run("desktop host reports no target when the shell icon view is absent", () =>
     Expect.Equal<nint?>(null, selected);
 });
 
+Run("desktop icon mask contains physical pixels inside an icon rectangle", () =>
+{
+    var mask = new DesktopIconMask(
+        isValid: true,
+        [new DesktopRectangle(10, 20, 30, 40)]);
+
+    Expect.True(mask.Contains(new DesktopPoint(10, 20)), "top-left icon pixel was not masked");
+    Expect.True(mask.Contains(new DesktopPoint(29, 39)), "bottom-right icon pixel was not masked");
+    Expect.False(mask.Contains(new DesktopPoint(30, 40)), "exclusive rectangle edge was masked");
+});
+
+Run("invalid desktop icon mask never consumes input", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Invalid);
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("desktop right click always remains with Explorer", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.RightDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty);
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("desktop icon masks the player beneath it", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(25, 25),
+        new DesktopIconMask(true, [new DesktopRectangle(0, 0, 80, 100)]));
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("blank desktop left click is forwarded and consumed", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        new DesktopIconMask(true, [new DesktopRectangle(0, 0, 80, 100)]));
+
+    Expect.Equal(DesktopPointerAction.ForwardAndConsume, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("blank desktop wheel input is forwarded and consumed", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.Wheel,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty);
+
+    Expect.Equal(DesktopPointerAction.ForwardAndConsume, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("blank desktop mouse move is forwarded without blocking Explorer", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.Move,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty);
+
+    Expect.Equal(DesktopPointerAction.Forward, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("window mode never uses desktop pointer forwarding", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty) with { Mode = HostMode.Window };
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("desktop input passes through while WebView is not ready", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty) with { WebViewReady = false };
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("desktop input passes through while wallpaper is detached", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty) with { DesktopAttached = false };
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
+Run("input over another application is never forwarded", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty) with { IsDesktopSurface = false };
+
+    Expect.Equal(DesktopPointerAction.PassThrough, DesktopPointerRoutePolicy.Decide(context));
+});
+
 Console.WriteLine(failures == 0
     ? "All core tests passed."
     : $"{failures} core test(s) failed.");
 
 return failures == 0 ? 0 : 1;
+
+static DesktopPointerRouteContext WallpaperPointer(
+    DesktopPointerEventKind eventKind,
+    DesktopPoint point,
+    DesktopIconMask iconMask) =>
+    new(
+        HostMode.Wallpaper,
+        WebViewReady: true,
+        DesktopAttached: true,
+        IsDesktopSurface: true,
+        point,
+        eventKind,
+        iconMask);
 
 void Run(string name, Action test)
 {
