@@ -60,7 +60,7 @@ internal sealed class DesktopIconMaskProvider : IDisposable
             Publish(new DesktopIconMask(true, rectangles));
         }
         catch (Exception exception) when (
-            exception is InvalidOperationException or InvalidCastException or COMException)
+            exception is InvalidOperationException or InvalidCastException or ArgumentException or COMException)
         {
             PublishInvalid($"读取桌面图标范围失败：{exception.Message}");
         }
@@ -148,7 +148,8 @@ internal sealed class DesktopIconMaskProvider : IDisposable
                         checked(left + width),
                         checked(top + height)));
                 }
-                catch (COMException)
+                catch (Exception exception) when (
+                    exception is InvalidCastException or ArgumentException or COMException)
                 {
                     // Explorer can replace one icon while the snapshot is being read.
                 }
