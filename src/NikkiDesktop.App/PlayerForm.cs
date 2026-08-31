@@ -18,6 +18,8 @@ internal sealed class PlayerForm : Form
     private readonly Label _statusLabel;
     private NotifyIcon? _trayIcon;
     private ContextMenuStrip? _trayMenu;
+    private ToolStripMenuItem? _windowModeItem;
+    private ToolStripMenuItem? _wallpaperModeItem;
     private ToolStripMenuItem? _desktopInteractionItem;
     private DesktopInteractionController? _desktopInteraction;
     private FullscreenPlaybackController? _fullscreenPlayback;
@@ -25,6 +27,8 @@ internal sealed class PlayerForm : Form
     private bool _initialized;
     private bool _captureCompleted;
     private bool _webViewReady;
+    private bool _startupPlaybackStarted;
+    private string? _startupPlaybackError;
     private bool _desktopInteractionEnabled = true;
     private bool _interactionFailureReported;
 
@@ -126,6 +130,8 @@ internal sealed class PlayerForm : Form
             {
                 TraceCapture("navigation-starting");
                 _webViewReady = false;
+                _startupPlaybackStarted = false;
+                _startupPlaybackError = null;
                 _desktopInteraction?.Stop();
                 _fullscreenPlayback?.Stop();
                 UpdateDesktopInteractionMenu();
@@ -172,6 +178,13 @@ internal sealed class PlayerForm : Form
         Text = _currentMode == HostMode.Wallpaper
             ? "孤独摇滚壁纸移植 - 桌面模式"
             : "孤独摇滚壁纸移植 - 独立窗口";
+        var startupPlayback = await StartupPlaybackService.TryStartAsync(
+            _webView.CoreWebView2);
+        _startupPlaybackStarted = startupPlayback.Started;
+        _startupPlaybackError = startupPlayback.Error;
+        TraceCapture(
+            $"startup-playback-completed: started={startupPlayback.Started}; " +
+            $"source={startupPlayback.Source}; error={startupPlayback.Error}");
         UpdateDesktopInteraction(showError: false);
         _fullscreenPlayback ??= new FullscreenPlaybackController(_webView);
         _fullscreenPlayback.Start();
@@ -188,32 +201,6 @@ internal sealed class PlayerForm : Form
         try
         {
             TraceCapture("capture-started");
-            var playRequest = JsonSerializer.Serialize(new
-            {
-                expression = """
-                    (async () => {
-                      const deadline = Date.now() + 3000;
-                      let playable = null;
-                      while (Date.now() < deadline) {
-                        const tracked = window.__nikkiDesktopTrackedAudio ?? [];
-                        playable = tracked.find(audio => audio.src && !audio.src.endsWith('/keypress.mp3')) ?? tracked[0];
-                        if (playable) break;
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                      }
-                      if (!playable) return { played: false, reason: 'no tracked audio' };
-                      window.__nikkiDesktopResumeAudioContext?.();
-                      await playable.play();
-                      return { played: true, src: playable.src };
-                    })()
-                    """,
-                awaitPromise = true,
-                userGesture = true,
-                returnByValue = true
-            });
-            await _webView.CoreWebView2.CallDevToolsProtocolMethodAsync(
-                "Runtime.evaluate",
-                playRequest);
-            TraceCapture("capture-play-request-completed");
             await Task.Delay(2000);
             var captureDirectory = Path.GetDirectoryName(capturePath);
             if (!string.IsNullOrEmpty(captureDirectory))
@@ -302,7 +289,10 @@ internal sealed class PlayerForm : Form
                         fullscreenMonitorRunning = _fullscreenPlayback?.IsRunning == true,
                         fullscreenPauseCount = _fullscreenPlayback?.PauseCount ?? 0,
                         fullscreenResumeCount = _fullscreenPlayback?.ResumeCount ?? 0,
+                        maximizedWindowObservationCount = _fullscreenPlayback?.MaximizedWindowObservationCount ?? 0,
                         fullscreenMonitorError = _fullscreenPlayback?.LastError,
+                        startupPlaybackStarted = _startupPlaybackStarted,
+                        startupPlaybackError = _startupPlaybackError,
                         manualPausePreserved
                     },
                     new JsonSerializerOptions { WriteIndented = true }));
@@ -322,7 +312,7 @@ internal sealed class PlayerForm : Form
 
             ExitCode = ready && hasApp && hasLoadedImage && shimInstalled &&
                        hasTrackedAudio && audioAdvanced && captureWritten && desktopModeVerified &&
-                       manualPausePreserved
+                       manualPausePreserved && _startupPlaybackStarted
                 ? 0
                 : 6;
             TraceCapture($"capture-finished: exit={ExitCode}");
@@ -398,8 +388,16 @@ internal sealed class PlayerForm : Form
     private void CreateTrayIcon()
     {
         _trayMenu = new ContextMenuStrip();
-        _trayMenu.Items.Add("切换-窗口模式", null, (_, _) => SwitchToWindowMode());
-        _trayMenu.Items.Add("切换-桌面模式", null, (_, _) => TryAttachToDesktop(showError: true));
+        _windowModeItem = new ToolStripMenuItem(
+            "切换-窗口模式",
+            image: null,
+            (_, _) => SwitchToWindowMode());
+        _wallpaperModeItem = new ToolStripMenuItem(
+            "切换-桌面模式",
+            image: null,
+            (_, _) => TryAttachToDesktop(showError: true));
+        _trayMenu.Items.Add(_windowModeItem);
+        _trayMenu.Items.Add(_wallpaperModeItem);
         _desktopInteractionItem = new ToolStripMenuItem("桌面交互：已开启")
         {
             Checked = true
@@ -418,6 +416,7 @@ internal sealed class PlayerForm : Form
             Visible = true
         };
         _trayIcon.DoubleClick += (_, _) => SwitchToWindowMode();
+        UpdateHostModeMenu();
     }
 
     private void TryAttachToDesktop(bool showError)
@@ -448,6 +447,7 @@ internal sealed class PlayerForm : Form
             {
                 _trayIcon.Text = "孤独摇滚壁纸移植 - 桌面模式";
             }
+            UpdateHostModeMenu();
             UpdateDesktopInteraction(showError);
             return;
         }
@@ -511,7 +511,20 @@ internal sealed class PlayerForm : Form
         }
         Show();
         Activate();
+        UpdateHostModeMenu();
         UpdateDesktopInteractionMenu();
+    }
+
+    private void UpdateHostModeMenu()
+    {
+        if (_windowModeItem is null || _wallpaperModeItem is null)
+        {
+            return;
+        }
+
+        var state = HostModeMenuState.From(_currentMode);
+        _windowModeItem.Checked = state.WindowModeChecked;
+        _wallpaperModeItem.Checked = state.WallpaperModeChecked;
     }
 
     private void ToggleDesktopInteraction()

@@ -42,6 +42,7 @@ internal sealed class FullscreenWindowDetector
 
             var visible = NativeMethods.IsWindowVisible(root);
             var minimized = NativeMethods.IsIconic(root);
+            var maximized = NativeMethods.IsZoomed(root);
             var cloaked = IsCloaked(root);
             if (!TryGetWindowBounds(root, out var windowBounds))
             {
@@ -70,6 +71,7 @@ internal sealed class FullscreenWindowDetector
                 IsVisible: visible,
                 IsMinimized: minimized,
                 IsCloaked: cloaked,
+                IsMaximized: maximized,
                 ToDesktopRectangle(windowBounds),
                 ToDesktopRectangle(monitorInfo.Monitor));
         }
@@ -142,6 +144,10 @@ internal sealed class FullscreenWindowDetector
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool IsIconic(nint window);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool IsZoomed(nint window);
 
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]

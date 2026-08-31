@@ -38,6 +38,8 @@ internal sealed class FullscreenPlaybackController : IDisposable
 
     public int ResumeCount { get; private set; }
 
+    public int MaximizedWindowObservationCount { get; private set; }
+
     public string? LastError { get; private set; }
 
     public void Start()
@@ -86,8 +88,13 @@ internal sealed class FullscreenPlaybackController : IDisposable
         _checking = true;
         try
         {
-            var isFullscreen = FullscreenWindowPolicy.IsOtherFullscreen(
-                _detector.CaptureContext());
+            var windowContext = _detector.CaptureContext();
+            if (windowContext.IsMaximized)
+            {
+                MaximizedWindowObservationCount++;
+            }
+
+            var isFullscreen = FullscreenWindowPolicy.IsOtherFullscreen(windowContext);
             var action = FullscreenPlaybackPolicy.Decide(
                 new FullscreenPlaybackState(
                     _wasFullscreen,
