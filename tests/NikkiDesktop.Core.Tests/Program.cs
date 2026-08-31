@@ -295,6 +295,103 @@ Run("visible native icons require at least one discovered mask rectangle", () =>
         "complete icon rectangles were rejected");
 });
 
+Run("a visible other window covering its monitor is full screen", () =>
+{
+    var context = FullscreenWindow(
+        new DesktopRectangle(0, 0, 2560, 1440),
+        new DesktopRectangle(0, 0, 2560, 1440));
+
+    Expect.True(
+        FullscreenWindowPolicy.IsOtherFullscreen(context),
+        "an exact monitor-sized foreground window was rejected");
+});
+
+Run("a maximized window leaving the taskbar visible is not full screen", () =>
+{
+    var context = FullscreenWindow(
+        new DesktopRectangle(0, 0, 2560, 1400),
+        new DesktopRectangle(0, 0, 2560, 1440));
+
+    Expect.False(
+        FullscreenWindowPolicy.IsOtherFullscreen(context),
+        "a taskbar-sized bottom gap was treated as full screen");
+});
+
+Run("full-screen detection supports negative monitor coordinates", () =>
+{
+    var context = FullscreenWindow(
+        new DesktopRectangle(-1920, 0, 0, 1080),
+        new DesktopRectangle(-1920, 0, 0, 1080));
+
+    Expect.True(
+        FullscreenWindowPolicy.IsOtherFullscreen(context),
+        "a full-screen window on the left monitor was rejected");
+});
+
+Run("full-screen detection tolerates two physical pixels on every edge", () =>
+{
+    var context = FullscreenWindow(
+        new DesktopRectangle(2, 2, 2558, 1438),
+        new DesktopRectangle(0, 0, 2560, 1440));
+
+    Expect.True(
+        FullscreenWindowPolicy.IsOtherFullscreen(context),
+        "the documented two-pixel tolerance was not inclusive");
+});
+
+Run("full-screen detection excludes non-player foreground surfaces", () =>
+{
+    var context = FullscreenWindow(
+        new DesktopRectangle(0, 0, 2560, 1440),
+        new DesktopRectangle(0, 0, 2560, 1440));
+
+    Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { IsOwnProcess = true }), "own process was accepted");
+    Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { IsDesktopSurface = true }), "desktop surface was accepted");
+    Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { IsVisible = false }), "hidden window was accepted");
+    Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { IsMinimized = true }), "minimized window was accepted");
+    Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { IsCloaked = true }), "cloaked window was accepted");
+    Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { HasForegroundWindow = false }), "missing foreground window was accepted");
+});
+
+Run("entering full screen requests one automatic pause", () =>
+{
+    var action = FullscreenPlaybackPolicy.Decide(
+        new FullscreenPlaybackState(
+            WasFullscreen: false,
+            IsFullscreen: true,
+            AutoPauseArmed: false));
+
+    Expect.Equal(FullscreenPlaybackAction.Pause, action);
+});
+
+Run("remaining full screen does not request repeated pauses", () =>
+{
+    var action = FullscreenPlaybackPolicy.Decide(
+        new FullscreenPlaybackState(
+            WasFullscreen: true,
+            IsFullscreen: true,
+            AutoPauseArmed: true));
+
+    Expect.Equal(FullscreenPlaybackAction.None, action);
+});
+
+Run("leaving full screen resumes only an automatically paused session", () =>
+{
+    var armedAction = FullscreenPlaybackPolicy.Decide(
+        new FullscreenPlaybackState(
+            WasFullscreen: true,
+            IsFullscreen: false,
+            AutoPauseArmed: true));
+    var manualPauseAction = FullscreenPlaybackPolicy.Decide(
+        new FullscreenPlaybackState(
+            WasFullscreen: true,
+            IsFullscreen: false,
+            AutoPauseArmed: false));
+
+    Expect.Equal(FullscreenPlaybackAction.Resume, armedAction);
+    Expect.Equal(FullscreenPlaybackAction.None, manualPauseAction);
+});
+
 Console.WriteLine(failures == 0
     ? "All core tests passed."
     : $"{failures} core test(s) failed.");
@@ -313,6 +410,19 @@ static DesktopPointerRouteContext WallpaperPointer(
         point,
         eventKind,
         iconMask);
+
+static FullscreenWindowContext FullscreenWindow(
+    DesktopRectangle windowBounds,
+    DesktopRectangle monitorBounds) =>
+    new(
+        HasForegroundWindow: true,
+        IsOwnProcess: false,
+        IsDesktopSurface: false,
+        IsVisible: true,
+        IsMinimized: false,
+        IsCloaked: false,
+        windowBounds,
+        monitorBounds);
 
 void Run(string name, Action test)
 {
