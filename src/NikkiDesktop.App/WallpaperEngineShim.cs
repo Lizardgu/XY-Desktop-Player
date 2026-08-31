@@ -16,6 +16,7 @@ internal static class WallpaperEngineShim
           let analyserConnectedToOutput = false;
           let listener = null;
           const connectedAudio = new WeakSet();
+          const fullscreenPausedAudio = new Set();
 
           function connectAudioElement(audio) {
             if (!audioContext || !analyser || connectedAudio.has(audio)) return;
@@ -69,6 +70,35 @@ internal static class WallpaperEngineShim
             }
           }
           window.__nikkiDesktopResumeAudioContext = resumeAudioContext;
+
+          window.__bocchiPauseForFullscreen = function pauseForFullscreen() {
+            for (const audio of trackedAudio) {
+              if (audio && !audio.paused && !audio.ended) {
+                fullscreenPausedAudio.add(audio);
+                audio.pause();
+              }
+            }
+            return fullscreenPausedAudio.size;
+          };
+
+          window.__bocchiResumeAfterFullscreen = async function resumeAfterFullscreen() {
+            const pausedByFullscreen = Array.from(fullscreenPausedAudio);
+            fullscreenPausedAudio.clear();
+            let resumed = 0;
+            for (const audio of pausedByFullscreen) {
+              if (!audio || !trackedAudio.includes(audio) || !audio.paused || audio.ended) continue;
+              try {
+                await audio.play();
+                resumed += 1;
+              } catch (_) {}
+            }
+            return resumed;
+          };
+
+          window.__bocchiClearFullscreenPause = function clearFullscreenPause() {
+            fullscreenPausedAudio.clear();
+          };
+
           window.addEventListener('pointerdown', resumeAudioContext, { capture: true });
           window.addEventListener('keydown', resumeAudioContext, { capture: true });
 

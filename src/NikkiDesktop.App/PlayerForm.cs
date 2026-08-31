@@ -20,6 +20,7 @@ internal sealed class PlayerForm : Form
     private ContextMenuStrip? _trayMenu;
     private ToolStripMenuItem? _desktopInteractionItem;
     private DesktopInteractionController? _desktopInteraction;
+    private FullscreenPlaybackController? _fullscreenPlayback;
     private HostMode _currentMode;
     private bool _initialized;
     private bool _captureCompleted;
@@ -126,6 +127,7 @@ internal sealed class PlayerForm : Form
                 TraceCapture("navigation-starting");
                 _webViewReady = false;
                 _desktopInteraction?.Stop();
+                _fullscreenPlayback?.Stop();
                 UpdateDesktopInteractionMenu();
             };
             _webView.NavigationCompleted += OnNavigationCompleted;
@@ -153,6 +155,7 @@ internal sealed class PlayerForm : Form
         {
             _webViewReady = false;
             _desktopInteraction?.Stop();
+            _fullscreenPlayback?.Stop();
             _statusLabel.Text = $"页面加载失败：{eventArgs.WebErrorStatus}";
             CenterStatusLabel();
             if (_capturePath is not null)
@@ -170,6 +173,8 @@ internal sealed class PlayerForm : Form
             ? "孤独摇滚壁纸移植 - 桌面模式"
             : "孤独摇滚壁纸移植 - 独立窗口";
         UpdateDesktopInteraction(showError: false);
+        _fullscreenPlayback ??= new FullscreenPlaybackController(_webView);
+        _fullscreenPlayback.Start();
 
         if (_capturePath is not null && !_captureCompleted)
         {
@@ -244,6 +249,42 @@ internal sealed class PlayerForm : Form
             var domPath = Path.ChangeExtension(capturePath, ".json");
             File.WriteAllText(domPath, domResult);
 
+            var manualPauseRequest = JsonSerializer.Serialize(new
+            {
+                expression = """
+                    (async () => {
+                      const tracked = window.__nikkiDesktopTrackedAudio ?? [];
+                      const playable = tracked.find(audio => audio.src && !audio.src.endsWith('/keypress.mp3')) ?? tracked[0];
+                      if (!playable) return { tested: false, reason: 'no tracked audio' };
+                      window.__bocchiClearFullscreenPause?.();
+                      playable.pause();
+                      const stored = window.__bocchiPauseForFullscreen?.() ?? -1;
+                      const resumed = await (window.__bocchiResumeAfterFullscreen?.() ?? 0);
+                      return {
+                        tested: true,
+                        stored,
+                        resumed,
+                        remainedPaused: playable.paused
+                      };
+                    })()
+                    """,
+                awaitPromise = true,
+                userGesture = true,
+                returnByValue = true
+            });
+            var manualPauseRaw = await _webView.CoreWebView2.CallDevToolsProtocolMethodAsync(
+                "Runtime.evaluate",
+                manualPauseRequest);
+            using var manualPauseDocument = JsonDocument.Parse(manualPauseRaw);
+            var manualPauseValue = manualPauseDocument.RootElement
+                .GetProperty("result")
+                .GetProperty("value");
+            var manualPausePreserved =
+                manualPauseValue.GetProperty("tested").GetBoolean() &&
+                manualPauseValue.GetProperty("stored").GetInt32() == 0 &&
+                manualPauseValue.GetProperty("resumed").GetInt32() == 0 &&
+                manualPauseValue.GetProperty("remainedPaused").GetBoolean();
+
             var hostPath = Path.ChangeExtension(capturePath, ".host.json");
             File.WriteAllText(
                 hostPath,
@@ -257,7 +298,12 @@ internal sealed class PlayerForm : Form
                         desktopInteractionRunning = _desktopInteraction?.IsRunning == true,
                         desktopIconMaskValid = _desktopInteraction?.IconMaskValid == true,
                         desktopIconRectangleCount = _desktopInteraction?.IconRectangleCount ?? 0,
-                        desktopInteractionError = _desktopInteraction?.LastError
+                        desktopInteractionError = _desktopInteraction?.LastError,
+                        fullscreenMonitorRunning = _fullscreenPlayback?.IsRunning == true,
+                        fullscreenPauseCount = _fullscreenPlayback?.PauseCount ?? 0,
+                        fullscreenResumeCount = _fullscreenPlayback?.ResumeCount ?? 0,
+                        fullscreenMonitorError = _fullscreenPlayback?.LastError,
+                        manualPausePreserved
                     },
                     new JsonSerializerOptions { WriteIndented = true }));
 
@@ -275,7 +321,8 @@ internal sealed class PlayerForm : Form
                                        _desktopHost.AttachedParentClassName == "WorkerW");
 
             ExitCode = ready && hasApp && hasLoadedImage && shimInstalled &&
-                       hasTrackedAudio && audioAdvanced && captureWritten && desktopModeVerified
+                       hasTrackedAudio && audioAdvanced && captureWritten && desktopModeVerified &&
+                       manualPausePreserved
                 ? 0
                 : 6;
             TraceCapture($"capture-finished: exit={ExitCode}");
@@ -341,6 +388,7 @@ internal sealed class PlayerForm : Form
     protected override void OnFormClosed(FormClosedEventArgs eventArgs)
     {
         _desktopInteraction?.Dispose();
+        _fullscreenPlayback?.Dispose();
         _trayIcon?.Dispose();
         _trayMenu?.Dispose();
         _desktopHost.Dispose();
@@ -350,8 +398,8 @@ internal sealed class PlayerForm : Form
     private void CreateTrayIcon()
     {
         _trayMenu = new ContextMenuStrip();
-        _trayMenu.Items.Add("切换到普通窗口", null, (_, _) => SwitchToWindowMode());
-        _trayMenu.Items.Add("嵌入桌面图标后方", null, (_, _) => TryAttachToDesktop(showError: true));
+        _trayMenu.Items.Add("切换-窗口模式", null, (_, _) => SwitchToWindowMode());
+        _trayMenu.Items.Add("切换-桌面模式", null, (_, _) => TryAttachToDesktop(showError: true));
         _desktopInteractionItem = new ToolStripMenuItem("桌面交互：已开启")
         {
             Checked = true
