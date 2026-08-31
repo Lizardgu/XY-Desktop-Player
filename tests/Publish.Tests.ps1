@@ -52,6 +52,14 @@ try {
         }
     }
 
+    $applicationVersion = (Get-Item -LiteralPath (Join-Path $outputRoot 'app\BocchiWallpaperPort.exe')).VersionInfo
+    if ($applicationVersion.ProductName -cne '孤独摇滚壁纸移植') {
+        throw "Published product name is '$($applicationVersion.ProductName)' instead of 孤独摇滚壁纸移植."
+    }
+    if ($applicationVersion.FileDescription -cne '孤独摇滚壁纸移植') {
+        throw "Published file description is '$($applicationVersion.FileDescription)' instead of 孤独摇滚壁纸移植."
+    }
+
     $rootDlls = @(Get-ChildItem -LiteralPath $outputRoot -File -Filter '*.dll')
     if ($rootDlls.Count -ne 0) {
         throw "Published root contains $($rootDlls.Count) DLL files instead of keeping dependencies under app."
