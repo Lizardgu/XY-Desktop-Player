@@ -1,11 +1,11 @@
-# Nikki Desktop
+# 孤独摇滚壁纸移植
 
 一个面向 Windows 10 的本地动态桌面播放器宿主。目标是让普通网页播放器脱离 Wallpaper Engine 独立运行，并支持两种模式：
 
 - `window`：普通独立窗口，用于调试和内容验收。
 - `wallpaper`：嵌入桌面图标后方，由系统托盘控制。
 
-当前分支正在按 `docs/superpowers/plans/2026-08-30-standalone-desktop-player.md` 实现。Steam Workshop 原目录不会被修改。
+Steam Workshop 原目录不会被修改。当前完整包设计见 `docs/plans/2026-08-31-bocchi-complete-package-design.md`。
 
 ## Git 与大文件
 
@@ -70,13 +70,13 @@
 & '.\tools\Run-Wallpaper.ps1'
 ```
 
-启动后播放器窗口不显示在任务栏，而是进入 Windows Explorer 的 `WorkerW` 桌面层。右下角托盘中的 Nikki Desktop 菜单提供：
+启动后播放器窗口不显示在任务栏，而是进入 Windows Explorer 的 `WorkerW` 桌面层。右下角托盘中的“孤独摇滚壁纸移植”菜单提供：
 
 - 切换到普通窗口
 - 重新嵌入桌面图标后方
 - 开启或关闭桌面交互
 - 重新加载播放器
-- 退出 Nikki Desktop
+- 退出孤独摇滚壁纸移植
 
 桌面交互默认开启。桌面文件和快捷方式像遮罩一样保留在播放器上方：
 
@@ -90,7 +90,7 @@
 
 双击托盘图标也会切回普通窗口。Explorer 重启后，程序会监听任务栏重建消息并尝试重新嵌入；失败时自动回退为普通窗口。
 
-如果 Wallpaper Engine 正在运行，两者可能同时占用桌面层。长期使用 B 前，建议由用户自己暂停或退出 Wallpaper Engine；Nikki Desktop 不会擅自关闭它。
+如果 Wallpaper Engine 正在运行，两者可能同时占用桌面层。长期使用 B 前，建议由用户自己暂停或退出 Wallpaper Engine；本程序不会擅自关闭它。
 
 可重复执行短时 B 验收（数秒后自动退出）：
 
@@ -106,6 +106,10 @@
 & '.\tools\Publish.ps1'
 ```
 
-默认输出到 `artifacts/publish/NikkiDesktop-win-x64`。这是 win-x64 自包含程序，目标电脑不需要另装 .NET SDK；仍需要系统的 WebView2 Runtime。发布目录故意不带受版权保护的音乐、封面和歌词，按其中的 `运行说明.txt` 放入内容包即可。
+默认输出到 `artifacts/publish/孤独摇滚壁纸移植-完整包`。这是包含当前完整播放器内容的 win-x64 自包含程序，目标电脑不需要另装 .NET SDK；仍需要系统的 WebView2 Runtime。
+
+成品根目录只保留两个启动器、一个说明文件、`app` 和 `content`。普通用户双击 `双击这里-启动桌面壁纸.cmd`；`普通窗口（备用）.cmd` 仅用于故障排查。`app` 中的 DLL 和运行库不是启动入口。
+
+完整包包含原播放器的照片、音乐和歌词。对外上传或转发前，需要先确认已取得相应内容的再发布权利；供他人自行替换素材的空壳包将在完整包验收后另行提炼。
 
 上传策略见 `docs/GITHUB-SAVE.md`。当前仓库只有本地提交，没有远程仓库，也没有执行 push。
