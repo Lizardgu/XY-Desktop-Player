@@ -42,8 +42,8 @@ internal sealed class PlayerForm : Form
         _taskbarCreatedMessage = NativeMethods.RegisterWindowMessage("TaskbarCreated");
 
         Text = requestedMode == HostMode.Wallpaper
-            ? "Nikki Desktop - 桌面模式准备中"
-            : "Nikki Desktop - 独立窗口";
+            ? "孤独摇滚壁纸移植 - 桌面模式准备中"
+            : "孤独摇滚壁纸移植 - 独立窗口";
         StartPosition = FormStartPosition.CenterScreen;
         ClientSize = capturePath is null ? new Size(1280, 720) : new Size(1920, 1080);
         MinimumSize = new Size(960, 540);
@@ -140,7 +140,7 @@ internal sealed class PlayerForm : Form
             MessageBox.Show(
                 this,
                 exception.Message,
-                "Nikki Desktop - WebView2 启动失败",
+                "孤独摇滚壁纸移植 - WebView2 启动失败",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
         }
@@ -167,8 +167,8 @@ internal sealed class PlayerForm : Form
         _webView.Visible = true;
         _webViewReady = true;
         Text = _currentMode == HostMode.Wallpaper
-            ? "Nikki Desktop - 桌面模式"
-            : "Nikki Desktop - 独立窗口";
+            ? "孤独摇滚壁纸移植 - 桌面模式"
+            : "孤独摇滚壁纸移植 - 独立窗口";
         UpdateDesktopInteraction(showError: false);
 
         if (_capturePath is not null && !_captureCompleted)
@@ -360,13 +360,13 @@ internal sealed class PlayerForm : Form
         _trayMenu.Items.Add(_desktopInteractionItem);
         _trayMenu.Items.Add("重新加载播放器", null, (_, _) => _webView.CoreWebView2?.Reload());
         _trayMenu.Items.Add(new ToolStripSeparator());
-        _trayMenu.Items.Add("退出 Nikki Desktop", null, (_, _) => Close());
+        _trayMenu.Items.Add("退出孤独摇滚壁纸移植", null, (_, _) => Close());
 
         _trayIcon = new NotifyIcon
         {
             ContextMenuStrip = _trayMenu,
             Icon = SystemIcons.Application,
-            Text = "Nikki Desktop",
+            Text = "孤独摇滚壁纸移植",
             Visible = true
         };
         _trayIcon.DoubleClick += (_, _) => SwitchToWindowMode();
@@ -387,7 +387,7 @@ internal sealed class PlayerForm : Form
             SwitchToWindowMode();
             if (showError)
             {
-                MessageBox.Show(this, "未检测到可用显示器。", "Nikki Desktop", MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show(this, "未检测到可用显示器。", "孤独摇滚壁纸移植", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
             return;
         }
@@ -395,10 +395,10 @@ internal sealed class PlayerForm : Form
         if (_desktopHost.TryAttach(Handle, screen.Bounds, out var error))
         {
             _currentMode = HostMode.Wallpaper;
-            Text = "Nikki Desktop - 桌面模式";
+            Text = "孤独摇滚壁纸移植 - 桌面模式";
             if (_trayIcon is not null)
             {
-                _trayIcon.Text = "Nikki Desktop - 桌面模式";
+                _trayIcon.Text = "孤独摇滚壁纸移植 - 桌面模式";
             }
             UpdateDesktopInteraction(showError);
             return;
@@ -410,7 +410,7 @@ internal sealed class PlayerForm : Form
             MessageBox.Show(
                 this,
                 $"桌面嵌入失败，已回退到普通窗口。\n\n{error}",
-                "Nikki Desktop",
+                "孤独摇滚壁纸移植",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Warning);
         }
@@ -418,7 +418,7 @@ internal sealed class PlayerForm : Form
         {
             _trayIcon?.ShowBalloonTip(
                 5000,
-                "Nikki Desktop",
+                "孤独摇滚壁纸移植",
                 $"Explorer 重启后重新嵌入失败：{error}",
                 ToolTipIcon.Warning);
         }
@@ -456,10 +456,10 @@ internal sealed class PlayerForm : Form
             ClientSize = new Size(width, height);
         }
 
-        Text = "Nikki Desktop - 独立窗口";
+        Text = "孤独摇滚壁纸移植 - 独立窗口";
         if (_trayIcon is not null)
         {
-            _trayIcon.Text = "Nikki Desktop - 普通窗口";
+            _trayIcon.Text = "孤独摇滚壁纸移植 - 普通窗口";
         }
         Show();
         Activate();
@@ -507,7 +507,7 @@ internal sealed class PlayerForm : Form
         _interactionFailureReported = true;
         _trayIcon?.ShowBalloonTip(
             5000,
-            "Nikki Desktop",
+            "孤独摇滚壁纸移植",
             $"桌面交互启动失败，鼠标已保留给 Windows。{Environment.NewLine}{_desktopInteraction.LastError}",
             ToolTipIcon.Warning);
     }

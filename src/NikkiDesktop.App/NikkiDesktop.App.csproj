@@ -4,6 +4,10 @@
     <TargetFramework>net8.0-windows</TargetFramework>
     <UseWindowsForms>true</UseWindowsForms>
     <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>BocchiWallpaperPort</AssemblyName>
+    <Product>孤独摇滚壁纸移植</Product>
+    <Title>孤独摇滚壁纸移植</Title>
+    <Description>孤独摇滚网页播放器的独立 Windows 桌面壁纸移植。</Description>
   </PropertyGroup>
 
   <ItemGroup>

@@ -1,0 +1,17 @@
+@echo off
+setlocal
+cd /d "%~dp0"
+if not exist "%~dp0app\BocchiWallpaperPort.exe" (
+  echo Application files are missing.
+  echo Please extract the complete package again.
+  pause
+  exit /b 2
+)
+if not exist "%~dp0content\reference-player\index.html" (
+  echo Wallpaper content is missing.
+  echo Please extract the complete package again.
+  pause
+  exit /b 3
+)
+start "" /d "%~dp0app" "%~dp0app\BocchiWallpaperPort.exe" --mode window --content "%~dp0content\reference-player"
+exit /b 0

@@ -12,7 +12,7 @@ internal static class Program
         {
             MessageBox.Show(
                 parseResult.Error ?? "启动参数无效。",
-                "Nikki Desktop",
+                "孤独摇滚壁纸移植",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
             return 2;
@@ -38,7 +38,7 @@ internal static class Program
         {
             MessageBox.Show(
                 exception.Message,
-                "Nikki Desktop - 内容不可用",
+                "孤独摇滚壁纸移植 - 内容不可用",
                 MessageBoxButtons.OK,
                 MessageBoxIcon.Error);
             return 3;

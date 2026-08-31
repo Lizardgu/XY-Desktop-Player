@@ -1,6 +1,8 @@
 [CmdletBinding()]
 param(
-    [string] $Output
+    [string] $Output,
+
+    [string] $Content
 )
 
 $ErrorActionPreference = 'Stop'
@@ -8,16 +10,36 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $artifactRoot = Join-Path $repoRoot 'artifacts'
 $publishRoot = Join-Path $artifactRoot 'publish'
 if (-not $Output) {
-    $Output = Join-Path $publishRoot 'NikkiDesktop-win-x64'
+    $Output = Join-Path $publishRoot '孤独摇滚壁纸移植-完整包'
+}
+if (-not $Content) {
+    $Content = Join-Path $repoRoot 'content\reference-player'
 }
 
 $resolvedOutput = [System.IO.Path]::GetFullPath($Output)
+$resolvedContent = [System.IO.Path]::GetFullPath($Content)
 $artifactBoundary = [System.IO.Path]::GetFullPath($artifactRoot) + [System.IO.Path]::DirectorySeparatorChar
 if (-not $resolvedOutput.StartsWith($artifactBoundary, [StringComparison]::OrdinalIgnoreCase)) {
     throw "发布目录必须位于项目 artifacts 目录内：$artifactRoot"
 }
 if (Test-Path -LiteralPath $resolvedOutput) {
     throw "发布目录已存在，不会自动覆盖：$resolvedOutput"
+}
+if (-not (Test-Path -LiteralPath $resolvedContent -PathType Container)) {
+    throw "播放器内容目录不存在：$resolvedContent"
+}
+
+$requiredContentEntries = @(
+    'index.html',
+    'static',
+    'assets\covers',
+    'assets\audios',
+    'assets\lyrics'
+)
+foreach ($relativePath in $requiredContentEntries) {
+    if (-not (Test-Path -LiteralPath (Join-Path $resolvedContent $relativePath))) {
+        throw "播放器内容不完整，缺少：$relativePath"
+    }
 }
 
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $resolvedOutput) | Out-Null
@@ -26,6 +48,7 @@ $appProject = Join-Path $repoRoot 'src\NikkiDesktop.App\NikkiDesktop.App.csproj'
 $dotnet = Join-Path $PSScriptRoot 'Invoke-DotNet.ps1'
 
 try {
+    $appRoot = Join-Path $stagingRoot 'app'
     & $dotnet restore $appProject `
         --runtime win-x64 `
         --configfile (Join-Path $repoRoot 'NuGet.Config') `
@@ -37,14 +60,31 @@ try {
         --runtime win-x64 `
         --self-contained true `
         --no-restore `
-        --output $stagingRoot `
+        --output $appRoot `
         '-p:PublishSingleFile=false' `
         '-p:DebugType=None' `
         '-p:DebugSymbols=false'
 
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\启动-A-普通窗口.cmd') -Destination $stagingRoot
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\启动-B-桌面模式.cmd') -Destination $stagingRoot
-    Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\运行说明.txt') -Destination $stagingRoot
+    $packagedContentRoot = Join-Path $stagingRoot 'content\reference-player'
+    New-Item -ItemType Directory -Force -Path $packagedContentRoot | Out-Null
+    foreach ($entry in Get-ChildItem -LiteralPath $resolvedContent -Force) {
+        Copy-Item -LiteralPath $entry.FullName -Destination $packagedContentRoot -Recurse -Force
+    }
+
+    $launcherNames = @(
+        '双击这里-启动桌面壁纸.cmd',
+        '普通窗口（备用）.cmd'
+    )
+    $ascii = [System.Text.ASCIIEncoding]::new()
+    foreach ($launcherName in $launcherNames) {
+        $sourcePath = Join-Path $repoRoot "packaging\$launcherName"
+        $destinationPath = Join-Path $stagingRoot $launcherName
+        $launcherText = [System.IO.File]::ReadAllText($sourcePath)
+        $normalizedText = $launcherText.Replace("`r`n", "`n").Replace("`r", "`n").Replace("`n", "`r`n")
+        [System.IO.File]::WriteAllText($destinationPath, $normalizedText, $ascii)
+    }
+
+    Copy-Item -LiteralPath (Join-Path $repoRoot 'packaging\使用说明.txt') -Destination $stagingRoot
     Move-Item -LiteralPath $stagingRoot -Destination $resolvedOutput
 
     Write-Host "发布完成：$resolvedOutput"
