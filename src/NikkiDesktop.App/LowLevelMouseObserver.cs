@@ -101,7 +101,8 @@ internal sealed class LowLevelMouseObserver : IDisposable
         try
         {
             var action = _route(pointerEvent);
-            if (action == DesktopPointerAction.ForwardAndConsume)
+            if (action is DesktopPointerAction.ForwardAndConsume or
+                DesktopPointerAction.DismissMenuForwardAndConsume)
             {
                 return (nint)1;
             }

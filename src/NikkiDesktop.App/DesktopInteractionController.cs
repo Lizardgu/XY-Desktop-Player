@@ -8,6 +8,7 @@ internal sealed class DesktopInteractionController : IDisposable
     private readonly DesktopHostService _desktopHost;
     private readonly DesktopIconMaskProvider _iconMaskProvider;
     private readonly DesktopSurfaceClassifier _surfaceClassifier;
+    private readonly DesktopContextMenuController _contextMenuController;
     private readonly WebViewPointerSink _pointerSink;
     private readonly LowLevelMouseObserver _mouseObserver;
     private bool _disposed;
@@ -20,6 +21,7 @@ internal sealed class DesktopInteractionController : IDisposable
         _desktopHost = desktopHost;
         _iconMaskProvider = new DesktopIconMaskProvider();
         _surfaceClassifier = new DesktopSurfaceClassifier(playerWindow);
+        _contextMenuController = new DesktopContextMenuController();
         _pointerSink = new WebViewPointerSink(webView);
         _mouseObserver = new LowLevelMouseObserver(Route);
     }
@@ -78,9 +80,18 @@ internal sealed class DesktopInteractionController : IDisposable
             IsDesktopSurface: _surfaceClassifier.IsDesktopSurface(pointerEvent.Point),
             pointerEvent.Point,
             pointerEvent.Kind,
-            _iconMaskProvider.Snapshot));
+            _iconMaskProvider.Snapshot,
+            IsDesktopMenuOpen: pointerEvent.Kind == DesktopPointerEventKind.LeftDown &&
+                _contextMenuController.IsDesktopMenuOpen()));
 
-        if (action is DesktopPointerAction.Forward or DesktopPointerAction.ForwardAndConsume)
+        if (action == DesktopPointerAction.DismissMenuForwardAndConsume)
+        {
+            _contextMenuController.TryDismissDesktopMenu();
+        }
+
+        if (action is DesktopPointerAction.Forward or
+            DesktopPointerAction.ForwardAndConsume or
+            DesktopPointerAction.DismissMenuForwardAndConsume)
         {
             _pointerSink.Enqueue(pointerEvent);
         }

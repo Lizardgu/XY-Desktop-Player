@@ -180,6 +180,18 @@ Run("blank desktop left click is forwarded and consumed", () =>
     Expect.Equal(DesktopPointerAction.ForwardAndConsume, DesktopPointerRoutePolicy.Decide(context));
 });
 
+Run("blank desktop left click dismisses an open Explorer menu before forwarding", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftDown,
+        new DesktopPoint(500, 500),
+        DesktopIconMask.Empty) with { IsDesktopMenuOpen = true };
+
+    Expect.Equal(
+        DesktopPointerAction.DismissMenuForwardAndConsume,
+        DesktopPointerRoutePolicy.Decide(context));
+});
+
 Run("blank desktop wheel input is forwarded and consumed", () =>
 {
     var context = WallpaperPointer(

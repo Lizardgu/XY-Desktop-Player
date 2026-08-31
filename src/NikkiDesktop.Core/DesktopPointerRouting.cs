@@ -45,7 +45,8 @@ public enum DesktopPointerAction
 {
     PassThrough,
     Forward,
-    ForwardAndConsume
+    ForwardAndConsume,
+    DismissMenuForwardAndConsume
 }
 
 public sealed record DesktopPointerRouteContext(
@@ -55,7 +56,8 @@ public sealed record DesktopPointerRouteContext(
     bool IsDesktopSurface,
     DesktopPoint Point,
     DesktopPointerEventKind EventKind,
-    DesktopIconMask IconMask);
+    DesktopIconMask IconMask,
+    bool IsDesktopMenuOpen = false);
 
 public static class DesktopPointerRoutePolicy
 {
@@ -76,6 +78,11 @@ public static class DesktopPointerRoutePolicy
             context.IconMask.Contains(context.Point))
         {
             return DesktopPointerAction.PassThrough;
+        }
+
+        if (context.EventKind == DesktopPointerEventKind.LeftDown && context.IsDesktopMenuOpen)
+        {
+            return DesktopPointerAction.DismissMenuForwardAndConsume;
         }
 
         return context.EventKind == DesktopPointerEventKind.Move
