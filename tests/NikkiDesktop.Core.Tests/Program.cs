@@ -317,6 +317,20 @@ Run("a maximized window leaving the taskbar visible is not full screen", () =>
         "a taskbar-sized bottom gap was treated as full screen");
 });
 
+Run("a standard maximized window triggers automatic pause with the taskbar visible", () =>
+{
+    var context = FullscreenWindow(
+        new DesktopRectangle(0, 0, 2560, 1400),
+        new DesktopRectangle(0, 0, 2560, 1440)) with
+    {
+        IsMaximized = true
+    };
+
+    Expect.True(
+        FullscreenWindowPolicy.IsOtherFullscreen(context),
+        "a standard maximized foreground window was ignored");
+});
+
 Run("full-screen detection supports negative monitor coordinates", () =>
 {
     var context = FullscreenWindow(
@@ -392,6 +406,22 @@ Run("leaving full screen resumes only an automatically paused session", () =>
     Expect.Equal(FullscreenPlaybackAction.None, manualPauseAction);
 });
 
+Run("window mode checks only the window tray item", () =>
+{
+    var state = HostModeMenuState.From(HostMode.Window);
+
+    Expect.True(state.WindowModeChecked, "window mode item was not checked");
+    Expect.False(state.WallpaperModeChecked, "desktop mode item remained checked");
+});
+
+Run("wallpaper mode checks only the desktop tray item", () =>
+{
+    var state = HostModeMenuState.From(HostMode.Wallpaper);
+
+    Expect.False(state.WindowModeChecked, "window mode item remained checked");
+    Expect.True(state.WallpaperModeChecked, "desktop mode item was not checked");
+});
+
 Console.WriteLine(failures == 0
     ? "All core tests passed."
     : $"{failures} core test(s) failed.");
@@ -421,6 +451,7 @@ static FullscreenWindowContext FullscreenWindow(
         IsVisible: true,
         IsMinimized: false,
         IsCloaked: false,
+        IsMaximized: false,
         windowBounds,
         monitorBounds);
 

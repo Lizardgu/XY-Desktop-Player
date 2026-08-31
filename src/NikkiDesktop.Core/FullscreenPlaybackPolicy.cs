@@ -7,6 +7,7 @@ public readonly record struct FullscreenWindowContext(
     bool IsVisible,
     bool IsMinimized,
     bool IsCloaked,
+    bool IsMaximized,
     DesktopRectangle WindowBounds,
     DesktopRectangle MonitorBounds);
 
@@ -26,6 +27,11 @@ public static class FullscreenWindowPolicy
             !IsValid(context.MonitorBounds))
         {
             return false;
+        }
+
+        if (context.IsMaximized)
+        {
+            return true;
         }
 
         return context.WindowBounds.Left <= context.MonitorBounds.Left + EdgeTolerance &&
