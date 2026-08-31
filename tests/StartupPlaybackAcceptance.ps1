@@ -31,8 +31,13 @@ $domResult = Get-Content -Raw -LiteralPath ([System.IO.Path]::ChangeExtension($o
 if ($hostResult.startupPlaybackStarted -ne $true) {
     throw "播放器没有报告启动自动播放成功：$($hostResult.startupPlaybackError)"
 }
-if ($domResult.playingAudioCount -lt 1 -or $domResult.maxAudioTime -le 0.25) {
-    throw '启动后音频没有实际播放并推进时间。'
+if ($domResult.maxAudioTime -le 0.25) {
+    throw '启动后音频没有实际推进时间。'
+}
+if ($domResult.playingAudioCount -lt 1 -and $hostResult.fullscreenPauseCount -lt 1) {
+    throw '启动后的音频既没有继续播放，也没有被最大化或全屏窗口自动暂停。'
 }
 
-Write-Host "PASS startup autoplay playing=$($domResult.playingAudioCount), maxAudioTime=$($domResult.maxAudioTime)"
+$autoPaused = $hostResult.fullscreenPauseCount -ge 1
+
+Write-Host "PASS startup autoplay playing=$($domResult.playingAudioCount), autoPaused=$autoPaused, maxAudioTime=$($domResult.maxAudioTime)"
