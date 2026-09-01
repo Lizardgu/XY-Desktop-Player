@@ -4,6 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $outputPath = Join-Path $repoRoot 'artifacts\smoke\foreground-app-auto-pause.png'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) | Out-Null
 $tracePath = [System.IO.Path]::ChangeExtension($outputPath, '.trace.log')
 $hostPath = [System.IO.Path]::ChangeExtension($outputPath, '.host.json')
 $domPath = [System.IO.Path]::ChangeExtension($outputPath, '.json')
@@ -280,7 +281,8 @@ public static class ForegroundAcceptanceNative
 }
 finally {
     if ($testWindow) {
-        [ForegroundAcceptanceNative]::ShowWindow($testWindow.Handle, 0) | Out-Null
+        $testWindow.Hide()
+        $testWindow.Dispose()
     }
     if ($captureProcess -and -not $captureProcess.HasExited) {
         $captureProcess.Kill()

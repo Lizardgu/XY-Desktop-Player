@@ -4,6 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $outputPath = Join-Path $repoRoot 'artifacts\smoke\startup-autoplay.png'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $outputPath) | Out-Null
 $tracePath = [System.IO.Path]::ChangeExtension($outputPath, '.trace.log')
 $hostPath = [System.IO.Path]::ChangeExtension($outputPath, '.host.json')
 $domPath = [System.IO.Path]::ChangeExtension($outputPath, '.json')

@@ -2,7 +2,7 @@
   "version": 1,
   "dependencies": {
     "net8.0": {
-      "XYDesktopPlayer.Core": {
+      "xydesktopplayer.core": {
         "type": "Project"
       }
     }

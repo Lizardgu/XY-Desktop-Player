@@ -6,6 +6,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $appPath = Join-Path $repoRoot 'src\XYDesktopPlayer.App\bin\Debug\net8.0-windows\XYDesktopPlayer.exe'
 $contentRoot = Join-Path $repoRoot 'content\reference-player'
 $capturePath = Join-Path $repoRoot 'artifacts\smoke\desktop-restoration.png'
+New-Item -ItemType Directory -Force -Path (Split-Path -Parent $capturePath) | Out-Null
 $process = $null
 
 Add-Type -TypeDefinition @'
