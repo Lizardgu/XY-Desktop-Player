@@ -13,6 +13,8 @@ internal sealed class FullscreenPlaybackController : IDisposable
     private bool _checking;
     private bool _wasFullscreen;
     private bool _autoPauseArmed;
+    private bool _startupPending;
+    private Func<Task>? _startPendingPlayback;
     private bool _disposed;
 
     public FullscreenPlaybackController(
@@ -34,6 +36,8 @@ internal sealed class FullscreenPlaybackController : IDisposable
 
     public bool AutoPauseArmed => _autoPauseArmed;
 
+    public bool StartupPending => _startupPending;
+
     public int PauseCount { get; private set; }
 
     public int ResumeCount { get; private set; }
@@ -42,9 +46,21 @@ internal sealed class FullscreenPlaybackController : IDisposable
 
     public string? LastError { get; private set; }
 
-    public void Start()
+    public bool IsPlaybackBlocked()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
+        return FullscreenWindowPolicy.IsOtherFullscreen(_detector.CaptureContext());
+    }
+
+    public void Start(
+        bool startupPending = false,
+        Func<Task>? startPendingPlayback = null)
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _startupPending = startupPending;
+        _startPendingPlayback = startupPending ? startPendingPlayback : null;
+        _wasFullscreen = startupPending;
+        _autoPauseArmed = false;
         if (_timer.Enabled)
         {
             return;
@@ -59,6 +75,8 @@ internal sealed class FullscreenPlaybackController : IDisposable
         _timer.Stop();
         _wasFullscreen = false;
         _autoPauseArmed = false;
+        _startupPending = false;
+        _startPendingPlayback = null;
         if (!_disposed && _webView.CoreWebView2 is not null)
         {
             _ = ClearStoredAudioAsync();
@@ -99,7 +117,8 @@ internal sealed class FullscreenPlaybackController : IDisposable
                 new FullscreenPlaybackState(
                     _wasFullscreen,
                     isFullscreen,
-                    _autoPauseArmed));
+                    _autoPauseArmed,
+                    _startupPending));
 
             switch (action)
             {
@@ -115,6 +134,18 @@ internal sealed class FullscreenPlaybackController : IDisposable
                     _autoPauseArmed = false;
                     _wasFullscreen = false;
                     ResumeCount++;
+                    break;
+
+                case FullscreenPlaybackAction.Start:
+                    var startPendingPlayback = _startPendingPlayback;
+                    _startupPending = false;
+                    _startPendingPlayback = null;
+                    _autoPauseArmed = false;
+                    _wasFullscreen = false;
+                    if (startPendingPlayback is not null)
+                    {
+                        await startPendingPlayback();
+                    }
                     break;
 
                 default:

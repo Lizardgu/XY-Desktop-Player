@@ -3,7 +3,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$outputPath = Join-Path $repoRoot 'artifacts\smoke\fullscreen-auto-pause.png'
+$outputPath = Join-Path $repoRoot 'artifacts\smoke\foreground-app-auto-pause.png'
 $tracePath = [System.IO.Path]::ChangeExtension($outputPath, '.trace.log')
 $hostPath = [System.IO.Path]::ChangeExtension($outputPath, '.host.json')
 $domPath = [System.IO.Path]::ChangeExtension($outputPath, '.json')
@@ -27,9 +27,64 @@ foreach ($path in @(
 }
 
 try {
+    Add-Type -AssemblyName System.Windows.Forms
+    Add-Type -AssemblyName System.Drawing
+    Add-Type -TypeDefinition @'
+using System;
+using System.Runtime.InteropServices;
+
+public static class ForegroundBootstrapNative
+{
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    public static extern IntPtr FindWindow(string className, string windowName);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool SetForegroundWindow(IntPtr window);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll")]
+    public static extern uint GetWindowThreadProcessId(IntPtr window, IntPtr processId);
+
+    [DllImport("kernel32.dll")]
+    public static extern uint GetCurrentThreadId();
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool AttachThreadInput(uint attach, uint attachTo, bool attachInput);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool BringWindowToTop(IntPtr window);
+
+    [DllImport("user32.dll")]
+    public static extern void SwitchToThisWindow(IntPtr window, bool altTab);
+
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr window, int command);
+}
+'@
+    $testWindow = [System.Windows.Forms.Form]::new()
+    $testWindow.Text = 'Normal foreground acceptance window'
+    $testWindow.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
+    $testWindow.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
+    $testWindow.BackColor = [System.Drawing.Color]::FromArgb(24, 30, 42)
+    $testWindow.TopMost = $true
+    $testWindow.ShowInTaskbar = $true
+    $testWindow.ClientSize = [System.Drawing.Size]::new(760, 460)
+    $testWindow.Show()
+    $testWindow.Activate()
+
     $captureScript = Join-Path $repoRoot 'tools\Run-CaptureTest.ps1'
     $contentRoot = Join-Path $repoRoot 'content\reference-player'
     $hostExecutable = (Get-Process -Id $PID).Path
+    $testStart = Get-Date
     $captureProcess = Start-Process `
         -FilePath $hostExecutable `
         -ArgumentList @(
@@ -51,12 +106,44 @@ try {
         if ($captureProcess.HasExited) {
             $stdout = if (Test-Path -LiteralPath $stdoutPath) { Get-Content -Raw -LiteralPath $stdoutPath } else { '' }
             $stderr = if (Test-Path -LiteralPath $stderrPath) { Get-Content -Raw -LiteralPath $stderrPath } else { '' }
-            throw "播放器在全屏验收开始前退出，退出代码：$($captureProcess.ExitCode)`n$stdout`n$stderr"
+            throw "播放器在前台应用验收开始前退出，退出代码：$($captureProcess.ExitCode)`n$stdout`n$stderr"
         }
         if ((Test-Path -LiteralPath $tracePath) -and
             (Get-Content -Raw -LiteralPath $tracePath) -match 'startup-playback-completed: started=True') {
             break
         }
+        $playerWindow = @(
+            Get-Process -Name BocchiWallpaperPort -ErrorAction SilentlyContinue |
+                Where-Object { $_.StartTime -ge $testStart -and $_.MainWindowHandle -ne 0 } |
+                Sort-Object StartTime -Descending |
+                Select-Object -First 1 -ExpandProperty MainWindowHandle
+        )
+        $playerWindow = if ($playerWindow.Count -gt 0) { [IntPtr]$playerWindow[0] } else { [IntPtr]::Zero }
+        if ($playerWindow -ne [IntPtr]::Zero) {
+            $testWindow.TopMost = $true
+            $testWindow.Activate()
+            $testWindow.BringToFront()
+            [System.Windows.Forms.Application]::DoEvents()
+            $testWindow.TopMost = $false
+            $currentForeground = [ForegroundBootstrapNative]::GetForegroundWindow()
+            $foregroundThread = [ForegroundBootstrapNative]::GetWindowThreadProcessId($currentForeground, [IntPtr]::Zero)
+            $currentThread = [ForegroundBootstrapNative]::GetCurrentThreadId()
+            $inputAttached = $foregroundThread -ne 0 -and $foregroundThread -ne $currentThread -and
+                [ForegroundBootstrapNative]::AttachThreadInput($currentThread, $foregroundThread, $true)
+            try {
+                [ForegroundBootstrapNative]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+                [ForegroundBootstrapNative]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+                [ForegroundBootstrapNative]::SwitchToThisWindow($playerWindow, $true)
+                [ForegroundBootstrapNative]::BringWindowToTop($playerWindow) | Out-Null
+                [ForegroundBootstrapNative]::SetForegroundWindow($playerWindow) | Out-Null
+            }
+            finally {
+                if ($inputAttached) {
+                    [ForegroundBootstrapNative]::AttachThreadInput($currentThread, $foregroundThread, $false) | Out-Null
+                }
+            }
+        }
+        [System.Windows.Forms.Application]::DoEvents()
         Start-Sleep -Milliseconds 100
     }
     if (-not (Test-Path -LiteralPath $tracePath) -or
@@ -64,13 +151,11 @@ try {
         throw '等待播放器开始播放超时。'
     }
 
-    Add-Type -AssemblyName System.Windows.Forms
-    Add-Type -AssemblyName System.Drawing
     Add-Type -TypeDefinition @'
 using System;
 using System.Runtime.InteropServices;
 
-public static class MaximizedAcceptanceNative
+public static class ForegroundAcceptanceNative
 {
     [DllImport("user32.dll")]
     public static extern IntPtr GetForegroundWindow();
@@ -78,10 +163,6 @@ public static class MaximizedAcceptanceNative
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool SetForegroundWindow(IntPtr window);
-
-    [DllImport("user32.dll")]
-    [return: MarshalAs(UnmanagedType.Bool)]
-    public static extern bool IsZoomed(IntPtr window);
 
     [DllImport("user32.dll")]
     public static extern uint GetWindowThreadProcessId(IntPtr window, IntPtr processId);
@@ -96,91 +177,104 @@ public static class MaximizedAcceptanceNative
     [DllImport("user32.dll")]
     [return: MarshalAs(UnmanagedType.Bool)]
     public static extern bool BringWindowToTop(IntPtr window);
+
+    [DllImport("user32.dll")]
+    public static extern void keybd_event(byte virtualKey, byte scanCode, uint flags, UIntPtr extraInfo);
+
+    [DllImport("user32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool ShowWindow(IntPtr window, int command);
 }
 '@
-    $testWindow = [System.Windows.Forms.Form]::new()
-    $testWindow.Text = 'Maximized acceptance window'
-    $testWindow.FormBorderStyle = [System.Windows.Forms.FormBorderStyle]::Sizable
-    $testWindow.StartPosition = [System.Windows.Forms.FormStartPosition]::CenterScreen
-    $testWindow.BackColor = [System.Drawing.Color]::FromArgb(24, 30, 42)
     $testWindow.TopMost = $true
-    $testWindow.ShowInTaskbar = $true
     $testWindow.Show()
-    $testWindow.WindowState = [System.Windows.Forms.FormWindowState]::Maximized
     $testWindow.Activate()
     $testWindow.BringToFront()
-    $currentForeground = [MaximizedAcceptanceNative]::GetForegroundWindow()
-    $foregroundThread = [MaximizedAcceptanceNative]::GetWindowThreadProcessId($currentForeground, [IntPtr]::Zero)
-    $currentThread = [MaximizedAcceptanceNative]::GetCurrentThreadId()
+    $currentForeground = [ForegroundAcceptanceNative]::GetForegroundWindow()
+    $foregroundThread = [ForegroundAcceptanceNative]::GetWindowThreadProcessId($currentForeground, [IntPtr]::Zero)
+    $currentThread = [ForegroundAcceptanceNative]::GetCurrentThreadId()
     $inputAttached = $foregroundThread -ne 0 -and $foregroundThread -ne $currentThread -and
-        [MaximizedAcceptanceNative]::AttachThreadInput($currentThread, $foregroundThread, $true)
+        [ForegroundAcceptanceNative]::AttachThreadInput($currentThread, $foregroundThread, $true)
     try {
-        [MaximizedAcceptanceNative]::BringWindowToTop($testWindow.Handle) | Out-Null
-        [MaximizedAcceptanceNative]::SetForegroundWindow($testWindow.Handle) | Out-Null
+        [ForegroundAcceptanceNative]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+        [ForegroundAcceptanceNative]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+        [ForegroundAcceptanceNative]::BringWindowToTop($testWindow.Handle) | Out-Null
+        [ForegroundAcceptanceNative]::SetForegroundWindow($testWindow.Handle) | Out-Null
     }
     finally {
         if ($inputAttached) {
-            [MaximizedAcceptanceNative]::AttachThreadInput($currentThread, $foregroundThread, $false) | Out-Null
+            [ForegroundAcceptanceNative]::AttachThreadInput($currentThread, $foregroundThread, $false) | Out-Null
         }
     }
 
     $activationDeadline = [DateTime]::UtcNow.AddSeconds(2)
     while ([DateTime]::UtcNow -lt $activationDeadline -and
-        ([MaximizedAcceptanceNative]::GetForegroundWindow() -ne $testWindow.Handle -or
-         -not [MaximizedAcceptanceNative]::IsZoomed($testWindow.Handle))) {
+        [ForegroundAcceptanceNative]::GetForegroundWindow() -ne $testWindow.Handle) {
         [System.Windows.Forms.Application]::DoEvents()
         Start-Sleep -Milliseconds 20
     }
-    if ([MaximizedAcceptanceNative]::GetForegroundWindow() -ne $testWindow.Handle -or
-        -not [MaximizedAcceptanceNative]::IsZoomed($testWindow.Handle)) {
-        $foregroundHandle = [MaximizedAcceptanceNative]::GetForegroundWindow()
-        $zoomed = [MaximizedAcceptanceNative]::IsZoomed($testWindow.Handle)
-        throw "测试窗口未能进入 Windows 前台最大化状态。test=$($testWindow.Handle), foreground=$foregroundHandle, isZoomed=$zoomed"
+    if ([ForegroundAcceptanceNative]::GetForegroundWindow() -ne $testWindow.Handle) {
+        $foregroundHandle = [ForegroundAcceptanceNative]::GetForegroundWindow()
+        throw "普通大小的测试窗口未能进入 Windows 前台。test=$($testWindow.Handle), foreground=$foregroundHandle"
     }
 
-    $fullscreenDeadline = [DateTime]::UtcNow.AddMilliseconds(1300)
-    while ([DateTime]::UtcNow -lt $fullscreenDeadline) {
-        [System.Windows.Forms.Application]::DoEvents()
+    Start-Sleep -Milliseconds 1300
+    $currentForeground = [ForegroundAcceptanceNative]::GetForegroundWindow()
+    $foregroundThread = [ForegroundAcceptanceNative]::GetWindowThreadProcessId($currentForeground, [IntPtr]::Zero)
+    $currentThread = [ForegroundAcceptanceNative]::GetCurrentThreadId()
+    $inputAttached = $foregroundThread -ne 0 -and $foregroundThread -ne $currentThread -and
+        [ForegroundAcceptanceNative]::AttachThreadInput($currentThread, $foregroundThread, $true)
+    try {
+        [ForegroundAcceptanceNative]::keybd_event(0x12, 0, 0, [UIntPtr]::Zero)
+        [ForegroundAcceptanceNative]::keybd_event(0x12, 0, 2, [UIntPtr]::Zero)
+        [ForegroundAcceptanceNative]::BringWindowToTop($playerWindow) | Out-Null
+        [ForegroundAcceptanceNative]::SetForegroundWindow($playerWindow) | Out-Null
+    }
+    finally {
+        if ($inputAttached) {
+            [ForegroundAcceptanceNative]::AttachThreadInput($currentThread, $foregroundThread, $false) | Out-Null
+        }
+    }
+    [ForegroundAcceptanceNative]::ShowWindow($testWindow.Handle, 0) | Out-Null
+    $returnDeadline = [DateTime]::UtcNow.AddSeconds(2)
+    while ([DateTime]::UtcNow -lt $returnDeadline -and
+        [ForegroundAcceptanceNative]::GetForegroundWindow() -ne $playerWindow) {
         Start-Sleep -Milliseconds 20
     }
-    $testWindow.Close()
-    $testWindow.Dispose()
-    $testWindow = $null
+    if ([ForegroundAcceptanceNative]::GetForegroundWindow() -ne $playerWindow) {
+        throw "未能把前台焦点交还给播放器。player=$playerWindow, foreground=$([ForegroundAcceptanceNative]::GetForegroundWindow())"
+    }
 
     if (-not $captureProcess.WaitForExit(15000)) {
-        throw '播放器最大化窗口验收没有在预期时间内结束。'
+        throw '播放器前台应用验收没有在预期时间内结束。'
     }
     if ($captureProcess.ExitCode -ne 0) {
-        throw "播放器最大化窗口验收退出代码：$($captureProcess.ExitCode)"
+        throw "播放器前台应用验收退出代码：$($captureProcess.ExitCode)"
     }
 
     $hostResult = Get-Content -Raw -LiteralPath $hostPath | ConvertFrom-Json
     $domResult = Get-Content -Raw -LiteralPath $domPath | ConvertFrom-Json
     if ($hostResult.fullscreenPauseCount -lt 1) {
-        throw '真实最大化窗口出现后没有触发自动暂停。'
+        throw '真实普通大小窗口进入前台后没有触发自动暂停。'
     }
     if ($hostResult.fullscreenResumeCount -lt 1) {
-        throw '真实最大化窗口关闭后没有触发自动恢复。'
-    }
-    if ($hostResult.maximizedWindowObservationCount -lt 1) {
-        throw '验收期间没有明确观察到 Windows 标准最大化状态。'
+        throw '焦点交回播放器后没有触发自动恢复。'
     }
     if (-not $hostResult.manualPausePreserved) {
         throw '手动暂停保护验证失败。'
     }
     if ($hostResult.fullscreenMonitorError) {
-        throw "最大化窗口监控报告错误：$($hostResult.fullscreenMonitorError)"
+        throw "前台应用监控报告错误：$($hostResult.fullscreenMonitorError)"
     }
     if ($domResult.maxAudioTime -le 0.25) {
         throw '音频没有实际开始播放。'
     }
 
-    Write-Host "PASS real maximized-window observed=$($hostResult.maximizedWindowObservationCount), pause=$($hostResult.fullscreenPauseCount), resume=$($hostResult.fullscreenResumeCount), manual pause preserved"
+    Write-Host "PASS real normal foreground app pause=$($hostResult.fullscreenPauseCount), resume=$($hostResult.fullscreenResumeCount), manual pause preserved"
 }
 finally {
     if ($testWindow) {
-        $testWindow.Close()
-        $testWindow.Dispose()
+        [ForegroundAcceptanceNative]::ShowWindow($testWindow.Handle, 0) | Out-Null
     }
     if ($captureProcess -and -not $captureProcess.HasExited) {
         $captureProcess.Kill()

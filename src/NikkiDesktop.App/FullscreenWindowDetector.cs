@@ -10,14 +10,6 @@ internal sealed class FullscreenWindowDetector
     private const uint MonitorDefaultToNearest = 2;
     private const uint DwmwaExtendedFrameBounds = 9;
     private const uint DwmwaCloaked = 14;
-    private static readonly HashSet<string> DesktopClasses = new(StringComparer.Ordinal)
-    {
-        "Progman",
-        "WorkerW",
-        "Shell_TrayWnd",
-        "Shell_SecondaryTrayWnd"
-    };
-
     private readonly uint _currentProcessId = (uint)Environment.ProcessId;
 
     public FullscreenWindowContext CaptureContext()
@@ -67,7 +59,7 @@ internal sealed class FullscreenWindowDetector
             return new FullscreenWindowContext(
                 HasForegroundWindow: true,
                 IsOwnProcess: processId == _currentProcessId,
-                IsDesktopSurface: DesktopClasses.Contains(className.ToString()),
+                IsDesktopSurface: ForegroundShellSurfacePolicy.IsShellSurface(className.ToString()),
                 IsVisible: visible,
                 IsMinimized: minimized,
                 IsCloaked: cloaked,

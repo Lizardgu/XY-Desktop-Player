@@ -318,15 +318,15 @@ Run("a visible other window covering its monitor is full screen", () =>
         "an exact monitor-sized foreground window was rejected");
 });
 
-Run("a maximized window leaving the taskbar visible is not full screen", () =>
+Run("a visible normal application window blocks desktop playback", () =>
 {
     var context = FullscreenWindow(
         new DesktopRectangle(0, 0, 2560, 1400),
         new DesktopRectangle(0, 0, 2560, 1440));
 
-    Expect.False(
+    Expect.True(
         FullscreenWindowPolicy.IsOtherFullscreen(context),
-        "a taskbar-sized bottom gap was treated as full screen");
+        "a normal foreground application was ignored");
 });
 
 Run("a standard maximized window triggers automatic pause with the taskbar visible", () =>
@@ -379,6 +379,32 @@ Run("full-screen detection excludes non-player foreground surfaces", () =>
     Expect.False(FullscreenWindowPolicy.IsOtherFullscreen(context with { HasForegroundWindow = false }), "missing foreground window was accepted");
 });
 
+Run("desktop shell surfaces never block playback", () =>
+{
+    foreach (var className in new[]
+    {
+        "Progman",
+        "WorkerW",
+        "Shell_TrayWnd",
+        "Shell_SecondaryTrayWnd",
+        "#32768",
+        "Windows.UI.Core.CoreWindow",
+        "XamlExplorerHostIslandWindow"
+    })
+    {
+        Expect.True(
+            ForegroundShellSurfacePolicy.IsShellSurface(className),
+            $"shell surface was treated as an application: {className}");
+    }
+
+    Expect.False(
+        ForegroundShellSurfacePolicy.IsShellSurface("CabinetWClass"),
+        "an Explorer folder window was treated as desktop shell UI");
+    Expect.False(
+        ForegroundShellSurfacePolicy.IsShellSurface("Chrome_WidgetWin_1"),
+        "a normal application window was treated as desktop shell UI");
+});
+
 Run("entering full screen requests one automatic pause", () =>
 {
     var action = FullscreenPlaybackPolicy.Decide(
@@ -416,6 +442,30 @@ Run("leaving full screen resumes only an automatically paused session", () =>
 
     Expect.Equal(FullscreenPlaybackAction.Resume, armedAction);
     Expect.Equal(FullscreenPlaybackAction.None, manualPauseAction);
+});
+
+Run("startup stays silent while another application is in front", () =>
+{
+    var action = FullscreenPlaybackPolicy.Decide(
+        new FullscreenPlaybackState(
+            WasFullscreen: true,
+            IsFullscreen: true,
+            AutoPauseArmed: false,
+            StartupPending: true));
+
+    Expect.Equal(FullscreenPlaybackAction.None, action);
+});
+
+Run("returning to the desktop starts pending autoplay", () =>
+{
+    var action = FullscreenPlaybackPolicy.Decide(
+        new FullscreenPlaybackState(
+            WasFullscreen: true,
+            IsFullscreen: false,
+            AutoPauseArmed: false,
+            StartupPending: true));
+
+    Expect.Equal(FullscreenPlaybackAction.Start, action);
 });
 
 Run("window mode checks only the window tray item", () =>

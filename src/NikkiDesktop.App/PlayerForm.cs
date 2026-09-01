@@ -178,16 +178,20 @@ internal sealed class PlayerForm : Form
         Text = _currentMode == HostMode.Wallpaper
             ? "孤独摇滚壁纸移植 - 桌面模式"
             : "孤独摇滚壁纸移植 - 独立窗口";
-        var startupPlayback = await StartupPlaybackService.TryStartAsync(
-            _webView.CoreWebView2);
-        _startupPlaybackStarted = startupPlayback.Started;
-        _startupPlaybackError = startupPlayback.Error;
-        TraceCapture(
-            $"startup-playback-completed: started={startupPlayback.Started}; " +
-            $"source={startupPlayback.Source}; error={startupPlayback.Error}");
         UpdateDesktopInteraction(showError: false);
         _fullscreenPlayback ??= new FullscreenPlaybackController(_webView);
-        _fullscreenPlayback.Start();
+        if (_fullscreenPlayback.IsPlaybackBlocked())
+        {
+            TraceCapture("startup-playback-deferred: another application is in front");
+            _fullscreenPlayback.Start(
+                startupPending: true,
+                startPendingPlayback: StartInitialPlaybackAsync);
+        }
+        else
+        {
+            await StartInitialPlaybackAsync();
+            _fullscreenPlayback.Start();
+        }
 
         if (_capturePath is not null && !_captureCompleted)
         {
@@ -196,12 +200,23 @@ internal sealed class PlayerForm : Form
         }
     }
 
+    private async Task StartInitialPlaybackAsync()
+    {
+        var startupPlayback = await StartupPlaybackService.TryStartAsync(
+            _webView.CoreWebView2);
+        _startupPlaybackStarted = startupPlayback.Started;
+        _startupPlaybackError = startupPlayback.Error;
+        TraceCapture(
+            $"startup-playback-completed: started={startupPlayback.Started}; " +
+            $"source={startupPlayback.Source}; error={startupPlayback.Error}");
+    }
+
     private async Task CaptureLoadedPlayerAsync(string capturePath)
     {
         try
         {
             TraceCapture("capture-started");
-            await Task.Delay(2000);
+            await Task.Delay(7000);
             var captureDirectory = Path.GetDirectoryName(capturePath);
             if (!string.IsNullOrEmpty(captureDirectory))
             {
@@ -373,6 +388,14 @@ internal sealed class PlayerForm : Form
                 TryAttachToDesktop(showError: false);
             });
         }
+    }
+
+    protected override void OnFormClosing(FormClosingEventArgs eventArgs)
+    {
+        _desktopInteraction?.Stop();
+        _fullscreenPlayback?.Stop();
+        _desktopHost.Detach(hideHostWindow: true);
+        base.OnFormClosing(eventArgs);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs eventArgs)

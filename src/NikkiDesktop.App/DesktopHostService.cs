@@ -16,6 +16,11 @@ internal sealed class DesktopHostService : IDisposable
     private const uint SwpShowWindow = 0x0040;
     private const uint SwpNoZOrder = 0x0004;
     private const uint SwpFrameChanged = 0x0020;
+    private const int SwHide = 0;
+    private const uint RdwInvalidate = 0x0001;
+    private const uint RdwErase = 0x0004;
+    private const uint RdwAllChildren = 0x0080;
+    private const uint RdwUpdateNow = 0x0100;
 
     private nint _hostWindow;
     private nint _attachedParent;
@@ -138,25 +143,45 @@ internal sealed class DesktopHostService : IDisposable
         return true;
     }
 
-    public void Detach()
+    public void Detach(bool hideHostWindow = false)
     {
         if (_hostWindow == nint.Zero)
         {
             return;
         }
 
-        _ = NativeMethods.SetParent(_hostWindow, _originalParent);
-        _ = NativeMethods.SetWindowLongPtr(_hostWindow, GwlStyle, _originalStyle);
-        _ = NativeMethods.SetWindowPos(
-            _hostWindow,
-            nint.Zero,
-            0,
-            0,
-            0,
-            0,
-            SwpNoActivate | SwpNoZOrder | SwpFrameChanged);
+        var previousAttachedParent = _attachedParent;
+        var progman = NativeMethods.FindWindow("Progman", null);
+        if (NativeMethods.IsWindow(_hostWindow))
+        {
+            if (hideHostWindow)
+            {
+                _ = NativeMethods.ShowWindow(_hostWindow, SwHide);
+            }
+            _ = NativeMethods.SetParent(_hostWindow, _originalParent);
+            _ = NativeMethods.SetWindowLongPtr(_hostWindow, GwlStyle, _originalStyle);
+            _ = NativeMethods.SetWindowPos(
+                _hostWindow,
+                nint.Zero,
+                0,
+                0,
+                0,
+                0,
+                SwpNoActivate | SwpNoZOrder | SwpFrameChanged);
+        }
+
         _attached = false;
         _attachedParent = nint.Zero;
+
+        var redrawFlags = RdwInvalidate | RdwErase | RdwAllChildren | RdwUpdateNow;
+        if (previousAttachedParent != nint.Zero && NativeMethods.IsWindow(previousAttachedParent))
+        {
+            _ = NativeMethods.RedrawWindow(previousAttachedParent, nint.Zero, nint.Zero, redrawFlags);
+        }
+        if (progman != nint.Zero && NativeMethods.IsWindow(progman))
+        {
+            _ = NativeMethods.RedrawWindow(progman, nint.Zero, nint.Zero, redrawFlags);
+        }
     }
 
     public void Dispose() => Detach();
@@ -239,5 +264,17 @@ internal sealed class DesktopHostService : IDisposable
         [DllImport("user32.dll", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool IsWindow(nint window);
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool ShowWindow(nint window, int command);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool RedrawWindow(
+            nint window,
+            nint updateRectangle,
+            nint updateRegion,
+            uint flags);
     }
 }

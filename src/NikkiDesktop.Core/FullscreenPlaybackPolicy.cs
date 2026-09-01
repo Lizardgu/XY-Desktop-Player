@@ -1,5 +1,22 @@
 namespace NikkiDesktop.Core;
 
+public static class ForegroundShellSurfacePolicy
+{
+    private static readonly HashSet<string> ShellSurfaceClasses = new(StringComparer.Ordinal)
+    {
+        "Progman",
+        "WorkerW",
+        "Shell_TrayWnd",
+        "Shell_SecondaryTrayWnd",
+        "#32768",
+        "Windows.UI.Core.CoreWindow",
+        "XamlExplorerHostIslandWindow"
+    };
+
+    public static bool IsShellSurface(string className) =>
+        !string.IsNullOrEmpty(className) && ShellSurfaceClasses.Contains(className);
+}
+
 public readonly record struct FullscreenWindowContext(
     bool HasForegroundWindow,
     bool IsOwnProcess,
@@ -22,44 +39,40 @@ public static class FullscreenWindowPolicy
             context.IsDesktopSurface ||
             !context.IsVisible ||
             context.IsMinimized ||
-            context.IsCloaked ||
-            !IsValid(context.WindowBounds) ||
-            !IsValid(context.MonitorBounds))
+            context.IsCloaked)
         {
             return false;
         }
 
-        if (context.IsMaximized)
-        {
-            return true;
-        }
-
-        return context.WindowBounds.Left <= context.MonitorBounds.Left + EdgeTolerance &&
-               context.WindowBounds.Top <= context.MonitorBounds.Top + EdgeTolerance &&
-               context.WindowBounds.Right >= context.MonitorBounds.Right - EdgeTolerance &&
-               context.WindowBounds.Bottom >= context.MonitorBounds.Bottom - EdgeTolerance;
+        return true;
     }
-
-    private static bool IsValid(DesktopRectangle rectangle) =>
-        rectangle.Right > rectangle.Left && rectangle.Bottom > rectangle.Top;
 }
 
 public readonly record struct FullscreenPlaybackState(
     bool WasFullscreen,
     bool IsFullscreen,
-    bool AutoPauseArmed);
+    bool AutoPauseArmed,
+    bool StartupPending = false);
 
 public enum FullscreenPlaybackAction
 {
     None,
     Pause,
-    Resume
+    Resume,
+    Start
 }
 
 public static class FullscreenPlaybackPolicy
 {
     public static FullscreenPlaybackAction Decide(FullscreenPlaybackState state)
     {
+        if (state.StartupPending)
+        {
+            return state.IsFullscreen
+                ? FullscreenPlaybackAction.None
+                : FullscreenPlaybackAction.Start;
+        }
+
         if (!state.WasFullscreen && state.IsFullscreen)
         {
             return FullscreenPlaybackAction.Pause;
