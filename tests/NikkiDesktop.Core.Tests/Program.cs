@@ -129,6 +129,33 @@ Run("desktop host reports no target when the shell icon view is absent", () =>
     Expect.Equal<nint?>(null, selected);
 });
 
+Run("desktop cleanup hides only an empty Explorer-owned target WorkerW", () =>
+{
+    Expect.True(
+        DesktopWorkerCleanupPolicy.ShouldHide(
+            new DesktopWorkerCleanupContext(
+                IsTargetWorkerW: true,
+                IsExplorerOwned: true,
+                ChildWindowCount: 0)),
+        "an empty Explorer-owned wallpaper WorkerW should be hidden after detach");
+});
+
+Run("desktop cleanup preserves unrelated or occupied WorkerW windows", () =>
+{
+    Expect.False(
+        DesktopWorkerCleanupPolicy.ShouldHide(
+            new DesktopWorkerCleanupContext(false, true, 0)),
+        "the shell icon WorkerW must not be hidden");
+    Expect.False(
+        DesktopWorkerCleanupPolicy.ShouldHide(
+            new DesktopWorkerCleanupContext(true, false, 0)),
+        "a WorkerW owned by another process must not be hidden");
+    Expect.False(
+        DesktopWorkerCleanupPolicy.ShouldHide(
+            new DesktopWorkerCleanupContext(true, true, 1)),
+        "a WorkerW still hosting another child must not be hidden");
+});
+
 Run("desktop icon mask contains physical pixels inside an icon rectangle", () =>
 {
     var mask = new DesktopIconMask(

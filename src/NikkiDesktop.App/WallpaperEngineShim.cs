@@ -2,7 +2,9 @@ namespace NikkiDesktop.App;
 
 internal static class WallpaperEngineShim
 {
-    public const string Script = """
+    public const int FadeDurationMilliseconds = 500;
+
+    public static string Script { get; } = $$"""
         (() => {
           if (window.__nikkiDesktopShimInstalled) return;
           window.__nikkiDesktopShimInstalled = true;
@@ -12,8 +14,10 @@ internal static class WallpaperEngineShim
           window.__nikkiDesktopTrackedAudio = trackedAudio;
           let audioContext = null;
           let analyser = null;
+          let masterGain = null;
           let frequencyData = null;
           let analyserConnectedToOutput = false;
+          let fadeGeneration = 0;
           let listener = null;
           const connectedAudio = new WeakSet();
           const fullscreenPausedAudio = new Set();
@@ -35,12 +39,14 @@ internal static class WallpaperEngineShim
               if (!AudioContextType) return false;
               audioContext = new AudioContextType();
               analyser = audioContext.createAnalyser();
+              masterGain = audioContext.createGain();
               analyser.fftSize = 256;
               analyser.smoothingTimeConstant = 0.75;
               frequencyData = new Uint8Array(analyser.frequencyBinCount);
             }
             if (!analyserConnectedToOutput) {
-              analyser.connect(audioContext.destination);
+              analyser.connect(masterGain);
+              masterGain.connect(audioContext.destination);
               analyserConnectedToOutput = true;
             }
             trackedAudio.forEach(connectAudioElement);
@@ -71,17 +77,53 @@ internal static class WallpaperEngineShim
           }
           window.__nikkiDesktopResumeAudioContext = resumeAudioContext;
 
-          window.__bocchiPauseForFullscreen = function pauseForFullscreen() {
-            for (const audio of trackedAudio) {
-              if (audio && !audio.paused && !audio.ended) {
+          const fadeDurationMilliseconds = {{FadeDurationMilliseconds}};
+          window.__bocchiFadeDurationMs = fadeDurationMilliseconds;
+          window.__bocchiLastFadeElapsedMs = 0;
+
+          function resetMasterGain() {
+            if (!masterGain || !audioContext) return;
+            const now = audioContext.currentTime;
+            masterGain.gain.cancelScheduledValues(now);
+            masterGain.gain.setValueAtTime(1, now);
+          }
+
+          function waitForFade() {
+            return new Promise(resolve => window.setTimeout(resolve, fadeDurationMilliseconds));
+          }
+
+          window.__bocchiPauseForFullscreen = async function pauseForFullscreen() {
+            const candidates = trackedAudio.filter(audio => audio && !audio.paused && !audio.ended);
+            if (candidates.length === 0) return fullscreenPausedAudio.size;
+
+            const generation = ++fadeGeneration;
+            const fadeStartedAt = performance.now();
+            if (ensureAudioGraph() && masterGain && audioContext) {
+              if (audioContext.state === 'suspended') {
+                try { await audioContext.resume(); } catch (_) {}
+              }
+              const now = audioContext.currentTime;
+              masterGain.gain.cancelScheduledValues(now);
+              masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+              masterGain.gain.linearRampToValueAtTime(0, now + fadeDurationMilliseconds / 1000);
+            }
+
+            await waitForFade();
+            if (generation !== fadeGeneration) return fullscreenPausedAudio.size;
+            window.__bocchiLastFadeElapsedMs = performance.now() - fadeStartedAt;
+            for (const audio of candidates) {
+              if (audio && trackedAudio.includes(audio) && !audio.paused && !audio.ended) {
                 fullscreenPausedAudio.add(audio);
                 audio.pause();
               }
             }
+            resetMasterGain();
             return fullscreenPausedAudio.size;
           };
 
           window.__bocchiResumeAfterFullscreen = async function resumeAfterFullscreen() {
+            fadeGeneration += 1;
+            resetMasterGain();
             const pausedByFullscreen = Array.from(fullscreenPausedAudio);
             fullscreenPausedAudio.clear();
             let resumed = 0;
@@ -96,6 +138,8 @@ internal static class WallpaperEngineShim
           };
 
           window.__bocchiClearFullscreenPause = function clearFullscreenPause() {
+            fadeGeneration += 1;
+            resetMasterGain();
             fullscreenPausedAudio.clear();
           };
 

@@ -17,6 +17,7 @@ internal sealed class DesktopHostService : IDisposable
     private const uint SwpNoZOrder = 0x0004;
     private const uint SwpFrameChanged = 0x0020;
     private const int SwHide = 0;
+    private const int SwShow = 5;
     private const uint RdwInvalidate = 0x0001;
     private const uint RdwErase = 0x0004;
     private const uint RdwAllChildren = 0x0080;
@@ -138,6 +139,7 @@ internal sealed class DesktopHostService : IDisposable
             return false;
         }
 
+        _ = NativeMethods.ShowWindow(workerW.Value, SwShow);
         _attached = true;
         _attachedParent = workerW.Value;
         return true;
@@ -176,7 +178,27 @@ internal sealed class DesktopHostService : IDisposable
         var redrawFlags = RdwInvalidate | RdwErase | RdwAllChildren | RdwUpdateNow;
         if (previousAttachedParent != nint.Zero && NativeMethods.IsWindow(previousAttachedParent))
         {
-            _ = NativeMethods.RedrawWindow(previousAttachedParent, nint.Zero, nint.Zero, redrawFlags);
+            var workerClassName = new StringBuilder(256);
+            _ = NativeMethods.GetClassName(
+                previousAttachedParent,
+                workerClassName,
+                workerClassName.Capacity);
+            _ = NativeMethods.GetWindowThreadProcessId(previousAttachedParent, out var workerProcessId);
+            _ = NativeMethods.GetWindowThreadProcessId(progman, out var explorerProcessId);
+            var childWindowCount = CountChildWindows(previousAttachedParent);
+            var cleanupContext = new DesktopWorkerCleanupContext(
+                IsTargetWorkerW: workerClassName.ToString().Equals("WorkerW", StringComparison.Ordinal),
+                IsExplorerOwned: workerProcessId != 0 && workerProcessId == explorerProcessId,
+                ChildWindowCount: childWindowCount);
+
+            if (DesktopWorkerCleanupPolicy.ShouldHide(cleanupContext))
+            {
+                _ = NativeMethods.ShowWindow(previousAttachedParent, SwHide);
+            }
+            else
+            {
+                _ = NativeMethods.RedrawWindow(previousAttachedParent, nint.Zero, nint.Zero, redrawFlags);
+            }
         }
         if (progman != nint.Zero && NativeMethods.IsWindow(progman))
         {
@@ -185,6 +207,17 @@ internal sealed class DesktopHostService : IDisposable
     }
 
     public void Dispose() => Detach();
+
+    private static int CountChildWindows(nint parent)
+    {
+        var count = 0;
+        _ = NativeMethods.EnumChildWindows(parent, (_, _) =>
+        {
+            count++;
+            return true;
+        }, nint.Zero);
+        return count;
+    }
 
     private static IReadOnlyList<DesktopTopLevelWindow> EnumerateDesktopWindows()
     {
@@ -225,8 +258,18 @@ internal sealed class DesktopHostService : IDisposable
         [return: MarshalAs(UnmanagedType.Bool)]
         internal static extern bool EnumWindows(EnumWindowsProc callback, nint parameter);
 
+        [DllImport("user32.dll", SetLastError = true)]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        internal static extern bool EnumChildWindows(
+            nint parent,
+            EnumWindowsProc callback,
+            nint parameter);
+
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
         internal static extern int GetClassName(nint window, StringBuilder className, int maxCount);
+
+        [DllImport("user32.dll", SetLastError = true)]
+        internal static extern uint GetWindowThreadProcessId(nint window, out uint processId);
 
         [DllImport("user32.dll", SetLastError = true)]
         internal static extern nint SendMessageTimeout(

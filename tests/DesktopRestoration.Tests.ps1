@@ -28,5 +28,14 @@ if ($desktopHost -notmatch 'RedrawWindow\(') {
 if ($desktopHost -notmatch 'RdwInvalidate\s*\|\s*RdwErase\s*\|\s*RdwAllChildren\s*\|\s*RdwUpdateNow') {
     throw 'DesktopHostService does not use the complete immediate-redraw flag set.'
 }
+if ($desktopHost -notmatch 'DesktopWorkerCleanupPolicy\.ShouldHide') {
+    throw 'DesktopHostService does not guard cleanup with the WorkerW ownership/child policy.'
+}
+if ($desktopHost -notmatch 'ShowWindow\(previousAttachedParent,\s*SwHide\)') {
+    throw 'DesktopHostService does not hide the empty wallpaper WorkerW after detaching.'
+}
+if ($desktopHost -notmatch 'ShowWindow\(workerW\.Value,\s*SwShow\)') {
+    throw 'DesktopHostService does not show the reusable wallpaper WorkerW before attaching.'
+}
 
-Write-Host 'PASS desktop host detaches before handle destruction and redraws Explorer surfaces'
+Write-Host 'PASS desktop host detaches before destruction, hides only the empty wallpaper WorkerW, and redraws Explorer'

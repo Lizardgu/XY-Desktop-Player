@@ -269,8 +269,14 @@ public static class ForegroundAcceptanceNative
     if ($domResult.maxAudioTime -le 0.25) {
         throw '音频没有实际开始播放。'
     }
+    if ($domResult.fadeDurationMs -ne 500) {
+        throw "自动暂停淡出时长不是 500 毫秒：$($domResult.fadeDurationMs)"
+    }
+    if ($domResult.lastFadeElapsedMs -lt 450 -or $domResult.lastFadeElapsedMs -gt 1200) {
+        throw "真实自动暂停没有在合理的 500 毫秒淡出窗口完成：$($domResult.lastFadeElapsedMs) ms"
+    }
 
-    Write-Host "PASS real normal foreground app pause=$($hostResult.fullscreenPauseCount), resume=$($hostResult.fullscreenResumeCount), manual pause preserved"
+    Write-Host "PASS real foreground app fade=$([Math]::Round($domResult.lastFadeElapsedMs))ms, pause=$($hostResult.fullscreenPauseCount), resume=$($hostResult.fullscreenResumeCount), manual pause preserved"
 }
 finally {
     if ($testWindow) {

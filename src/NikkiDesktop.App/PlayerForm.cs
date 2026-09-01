@@ -245,7 +245,9 @@ internal sealed class PlayerForm : Form
                   wallpaperAudioListenerAvailable: typeof window.wallpaperRegisterAudioListener === 'function',
                   trackedAudioCount: window.__nikkiDesktopTrackedAudio?.length ?? 0,
                   playingAudioCount: window.__nikkiDesktopTrackedAudio?.filter(audio => !audio.paused).length ?? 0,
-                  maxAudioTime: Math.max(0, ...(window.__nikkiDesktopTrackedAudio?.map(audio => audio.currentTime) ?? []))
+                  maxAudioTime: Math.max(0, ...(window.__nikkiDesktopTrackedAudio?.map(audio => audio.currentTime) ?? [])),
+                  fadeDurationMs: window.__bocchiFadeDurationMs ?? 0,
+                  lastFadeElapsedMs: window.__bocchiLastFadeElapsedMs ?? 0
                 }))()
                 """);
             var domPath = Path.ChangeExtension(capturePath, ".json");
@@ -260,7 +262,7 @@ internal sealed class PlayerForm : Form
                       if (!playable) return { tested: false, reason: 'no tracked audio' };
                       window.__bocchiClearFullscreenPause?.();
                       playable.pause();
-                      const stored = window.__bocchiPauseForFullscreen?.() ?? -1;
+                      const stored = await (window.__bocchiPauseForFullscreen?.() ?? -1);
                       const resumed = await (window.__bocchiResumeAfterFullscreen?.() ?? 0);
                       return {
                         tested: true,
