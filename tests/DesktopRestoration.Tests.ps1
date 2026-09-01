@@ -3,8 +3,8 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$playerFormPath = Join-Path $repoRoot 'src\NikkiDesktop.App\PlayerForm.cs'
-$desktopHostPath = Join-Path $repoRoot 'src\NikkiDesktop.App\DesktopHostService.cs'
+$playerFormPath = Join-Path $repoRoot 'src\XYDesktopPlayer.App\PlayerForm.cs'
+$desktopHostPath = Join-Path $repoRoot 'src\XYDesktopPlayer.App\DesktopHostService.cs'
 $playerForm = Get-Content -Raw -LiteralPath $playerFormPath
 $desktopHost = Get-Content -Raw -LiteralPath $desktopHostPath
 

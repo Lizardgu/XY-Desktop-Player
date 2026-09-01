@@ -39,7 +39,7 @@ try {
     }
 
     $requiredFiles = @(
-        'app\BocchiWallpaperPort.exe',
+        'app\XYDesktopPlayer.exe',
         'content\reference-player\index.html',
         'content\reference-player\static\fixture.txt',
         '双击这里-启动桌面壁纸.cmd',
@@ -52,12 +52,12 @@ try {
         }
     }
 
-    $applicationVersion = (Get-Item -LiteralPath (Join-Path $outputRoot 'app\BocchiWallpaperPort.exe')).VersionInfo
-    if ($applicationVersion.ProductName -cne '孤独摇滚壁纸移植') {
-        throw "Published product name is '$($applicationVersion.ProductName)' instead of 孤独摇滚壁纸移植."
+    $applicationVersion = (Get-Item -LiteralPath (Join-Path $outputRoot 'app\XYDesktopPlayer.exe')).VersionInfo
+    if ($applicationVersion.ProductName -cne 'XY桌面播放器') {
+        throw "Published product name is '$($applicationVersion.ProductName)' instead of XY桌面播放器."
     }
-    if ($applicationVersion.FileDescription -cne '孤独摇滚壁纸移植') {
-        throw "Published file description is '$($applicationVersion.FileDescription)' instead of 孤独摇滚壁纸移植."
+    if ($applicationVersion.FileDescription -cne 'XY桌面播放器') {
+        throw "Published file description is '$($applicationVersion.FileDescription)' instead of XY桌面播放器."
     }
 
     $rootDlls = @(Get-ChildItem -LiteralPath $outputRoot -File -Filter '*.dll')

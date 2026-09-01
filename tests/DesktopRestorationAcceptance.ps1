@@ -3,7 +3,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$appPath = Join-Path $repoRoot 'src\NikkiDesktop.App\bin\Debug\net8.0-windows\BocchiWallpaperPort.exe'
+$appPath = Join-Path $repoRoot 'src\XYDesktopPlayer.App\bin\Debug\net8.0-windows\XYDesktopPlayer.exe'
 $contentRoot = Join-Path $repoRoot 'content\reference-player'
 $capturePath = Join-Path $repoRoot 'artifacts\smoke\desktop-restoration.png'
 $process = $null

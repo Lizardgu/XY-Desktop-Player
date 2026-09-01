@@ -10,7 +10,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $artifactRoot = Join-Path $repoRoot 'artifacts'
 $publishRoot = Join-Path $artifactRoot 'publish'
 if (-not $Output) {
-    $Output = Join-Path $publishRoot '孤独摇滚壁纸移植-完整包'
+    $Output = Join-Path $publishRoot 'XY桌面播放器-v1.0.0-win-x64'
 }
 if (-not $Content) {
     $Content = Join-Path $repoRoot 'content\reference-player'
@@ -44,7 +44,7 @@ foreach ($relativePath in $requiredContentEntries) {
 
 New-Item -ItemType Directory -Force -Path (Split-Path -Parent $resolvedOutput) | Out-Null
 $stagingRoot = Join-Path $artifactRoot ('.publishing-' + [Guid]::NewGuid().ToString('N'))
-$appProject = Join-Path $repoRoot 'src\NikkiDesktop.App\NikkiDesktop.App.csproj'
+$appProject = Join-Path $repoRoot 'src\XYDesktopPlayer.App\XYDesktopPlayer.App.csproj'
 $dotnet = Join-Path $PSScriptRoot 'Invoke-DotNet.ps1'
 
 try {

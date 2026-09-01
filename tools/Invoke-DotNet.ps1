@@ -15,7 +15,7 @@ $env:DOTNET_CLI_TELEMETRY_OPTOUT = '1'
 $env:DOTNET_NOLOGO = '1'
 $workspaceSdk = Join-Path (Split-Path -Parent (Split-Path -Parent $repoRoot)) 'work\tooling\dotnet8\dotnet.exe'
 $candidates = @(
-    $env:NIKKI_DOTNET,
+    $env:XY_DOTNET,
     $workspaceSdk,
     (Join-Path $repoRoot '.dotnet\dotnet.exe')
 ) | Where-Object { $_ -and (Test-Path -LiteralPath $_) }
@@ -32,7 +32,7 @@ if (-not $dotnet) {
 }
 
 if (-not $dotnet) {
-    throw '未找到 .NET 8 SDK。请安装 SDK，或把 dotnet.exe 路径放到 NIKKI_DOTNET 环境变量。'
+    throw '未找到 .NET 8 SDK。请安装 SDK，或把 dotnet.exe 路径放到 XY_DOTNET 环境变量。'
 }
 
 & $dotnet @DotNetArgs

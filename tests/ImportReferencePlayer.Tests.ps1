@@ -4,7 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
 $testId = [Guid]::NewGuid().ToString('N')
-$sourceRoot = Join-Path ([System.IO.Path]::GetTempPath()) "NikkiDesktop-ImportSource-$testId"
+$sourceRoot = Join-Path ([System.IO.Path]::GetTempPath()) "XYDesktopPlayer-ImportSource-$testId"
 $destinationRoot = Join-Path $repoRoot "content\test-import-$testId"
 $manifestPath = Join-Path $repoRoot "manifests\test-import-$testId.json"
 

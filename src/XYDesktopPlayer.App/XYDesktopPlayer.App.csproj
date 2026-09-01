@@ -1,0 +1,23 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <ApplicationManifest>app.manifest</ApplicationManifest>
+    <AssemblyName>XYDesktopPlayer</AssemblyName>
+    <Product>XY桌面播放器</Product>
+    <AssemblyTitle>XY桌面播放器</AssemblyTitle>
+    <Description>可将本地网页播放器作为 Windows 动态桌面运行的独立宿主。</Description>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\XYDesktopPlayer.Core\XYDesktopPlayer.Core.csproj" />
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.4191.47" />
+  </ItemGroup>
+
+  <Target Name="RemoveUnusedWebView2WpfReference" BeforeTargets="ResolveAssemblyReferences">
+    <ItemGroup>
+      <Reference Remove="@(Reference)" Condition="'%(Filename)' == 'Microsoft.Web.WebView2.Wpf'" />
+    </ItemGroup>
+  </Target>
+</Project>

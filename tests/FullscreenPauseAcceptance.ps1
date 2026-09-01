@@ -113,7 +113,7 @@ public static class ForegroundBootstrapNative
             break
         }
         $playerWindow = @(
-            Get-Process -Name BocchiWallpaperPort -ErrorAction SilentlyContinue |
+            Get-Process -Name XYDesktopPlayer -ErrorAction SilentlyContinue |
                 Where-Object { $_.StartTime -ge $testStart -and $_.MainWindowHandle -ne 0 } |
                 Sort-Object StartTime -Descending |
                 Select-Object -First 1 -ExpandProperty MainWindowHandle

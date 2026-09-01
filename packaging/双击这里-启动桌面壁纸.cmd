@@ -1,7 +1,7 @@
 @echo off
 setlocal
 cd /d "%~dp0"
-if not exist "%~dp0app\BocchiWallpaperPort.exe" (
+if not exist "%~dp0app\XYDesktopPlayer.exe" (
   echo Application files are missing.
   echo Please extract the complete package again.
   pause
@@ -13,5 +13,5 @@ if not exist "%~dp0content\reference-player\index.html" (
   pause
   exit /b 3
 )
-start "" /d "%~dp0app" "%~dp0app\BocchiWallpaperPort.exe" --mode wallpaper --content "%~dp0content\reference-player"
+start "" /d "%~dp0app" "%~dp0app\XYDesktopPlayer.exe" --mode wallpaper --content "%~dp0content\reference-player"
 exit /b 0

@@ -1,11 +1,11 @@
-# 孤独摇滚壁纸移植
+# XY桌面播放器
 
 一个面向 Windows 10 的本地动态桌面播放器宿主。目标是让普通网页播放器脱离 Wallpaper Engine 独立运行，并支持两种模式：
 
 - `window`：普通独立窗口，用于调试和内容验收。
 - `wallpaper`：嵌入桌面图标后方，由系统托盘控制。
 
-Steam Workshop 原目录不会被修改。当前完整包设计见 `docs/plans/2026-08-31-bocchi-complete-package-design.md`。
+Steam Workshop 原目录不会被修改。当前版本状态与后续换主题方法见 `docs/PROJECT-STATUS.md`。
 
 ## Git 与大文件
 
@@ -17,7 +17,7 @@ Steam Workshop 原目录不会被修改。当前完整包设计见 `docs/plans/2
 - .NET 8 SDK
 - Microsoft Edge WebView2 Runtime
 
-仓库内的 `tools/Invoke-DotNet.ps1` 会优先使用 `NIKKI_DOTNET` 指定的 SDK，也能识别本次工作区内的项目级 SDK。
+仓库内的 `tools/Invoke-DotNet.ps1` 会优先使用 `XY_DOTNET` 指定的 SDK，也能识别本次工作区内的项目级 SDK。
 
 ## 导入参考播放器
 
@@ -40,13 +40,13 @@ Steam Workshop 原目录不会被修改。当前完整包设计见 `docs/plans/2
 首次还原 WebView2 开发包：
 
 ```powershell
-& '.\tools\Invoke-DotNet.ps1' restore '.\NikkiDesktop.sln' --configfile '.\NuGet.Config'
+& '.\tools\Invoke-DotNet.ps1' restore '.\XYDesktopPlayer.sln' --configfile '.\NuGet.Config'
 ```
 
 构建与非图形自检：
 
 ```powershell
-& '.\tools\Invoke-DotNet.ps1' build '.\NikkiDesktop.sln' --no-restore
+& '.\tools\Invoke-DotNet.ps1' build '.\XYDesktopPlayer.sln' --no-restore
 & '.\tools\Run-SelfTest.ps1'
 ```
 
@@ -70,13 +70,13 @@ Steam Workshop 原目录不会被修改。当前完整包设计见 `docs/plans/2
 & '.\tools\Run-Wallpaper.ps1'
 ```
 
-启动后播放器窗口不显示在任务栏，而是进入 Windows Explorer 的 `WorkerW` 桌面层。右下角托盘中的“孤独摇滚壁纸移植”菜单提供：
+启动后播放器窗口不显示在任务栏，而是进入 Windows Explorer 的 `WorkerW` 桌面层。右下角托盘中的“XY桌面播放器”菜单提供：
 
 - 切换-窗口模式
 - 切换-桌面模式
 - 开启或关闭桌面交互
 - 重新加载播放器
-- 退出孤独摇滚壁纸移植
+- 退出 XY桌面播放器
 
 “切换-窗口模式”和“切换-桌面模式”左侧的勾表示当前实际模式，两项始终只有一项被勾选；桌面嵌入失败并回退窗口模式时，勾也会跟着实际模式变化。
 
@@ -117,7 +117,7 @@ Steam Workshop 原目录不会被修改。当前完整包设计见 `docs/plans/2
 & '.\tools\Publish.ps1'
 ```
 
-默认输出到 `artifacts/publish/孤独摇滚壁纸移植-完整包`。这是包含当前完整播放器内容的 win-x64 自包含程序，目标电脑不需要另装 .NET SDK；仍需要系统的 WebView2 Runtime。
+默认输出到 `artifacts/publish/XY桌面播放器-v1.0.0-win-x64`。这是包含当前完整播放器内容的 win-x64 自包含程序，目标电脑不需要另装 .NET SDK；仍需要系统的 WebView2 Runtime。
 
 成品根目录只保留两个启动器、一个说明文件、`app` 和 `content`。普通用户双击 `双击这里-启动桌面壁纸.cmd`；`普通窗口（备用）.cmd` 仅用于故障排查。`app` 中的 DLL 和运行库不是启动入口。
 

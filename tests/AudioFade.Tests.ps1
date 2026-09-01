@@ -3,7 +3,7 @@ param()
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
-$shimPath = Join-Path $repoRoot 'src\NikkiDesktop.App\WallpaperEngineShim.cs'
+$shimPath = Join-Path $repoRoot 'src\XYDesktopPlayer.App\WallpaperEngineShim.cs'
 $shim = Get-Content -Raw -LiteralPath $shimPath
 
 if ($shim -notmatch 'FadeDurationMilliseconds\s*=\s*500') {
@@ -15,13 +15,13 @@ if ($shim -notmatch 'createGain\(\)') {
 if ($shim -notmatch 'linearRampToValueAtTime\(0') {
     throw 'Automatic pause does not schedule a smooth gain ramp to silence.'
 }
-if ($shim -notmatch '__bocchiPauseForFullscreen\s*=\s*async function') {
+if ($shim -notmatch '__xyDesktopPauseForFullscreen\s*=\s*async function') {
     throw 'Automatic pause must await the fade before pausing media elements.'
 }
 
 $pauseMatch = [regex]::Match(
     $shim,
-    '__bocchiPauseForFullscreen\s*=\s*async function[\s\S]*?__bocchiResumeAfterFullscreen')
+    '__xyDesktopPauseForFullscreen\s*=\s*async function[\s\S]*?__xyDesktopResumeAfterFullscreen')
 if (-not $pauseMatch.Success) {
     throw 'Could not locate the automatic pause implementation.'
 }
@@ -34,7 +34,7 @@ if ($delayIndex -lt 0 -or $pauseIndex -lt 0 -or $pauseIndex -lt $delayIndex) {
 
 $resumeMatch = [regex]::Match(
     $shim,
-    '__bocchiResumeAfterFullscreen\s*=\s*async function[\s\S]*?__bocchiClearFullscreenPause')
+    '__xyDesktopResumeAfterFullscreen\s*=\s*async function[\s\S]*?__xyDesktopClearFullscreenPause')
 if (-not $resumeMatch.Success) {
     throw 'Could not locate the automatic resume implementation.'
 }
