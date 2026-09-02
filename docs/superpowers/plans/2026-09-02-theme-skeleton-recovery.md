@@ -56,7 +56,7 @@
 
 - [x] Replace stale claims of user-verified automatic pause with the current known limitation.
 - [x] Record the exact old directories excluded and the approximate space they occupied.
-- [ ] Commit the recovered source to the local recovery branch without pushing.
+- [x] Commit the recovered source to the local recovery branch without pushing.
 
 ### Task 4: Reclaim disk space
 
@@ -65,7 +65,7 @@
 - Delete after verification: `C:\Users\Administrator\Documents\Codex\worktrees\XY桌面播放器-theme-skeleton`
 - Delete after verification: `C:\Users\Administrator\Documents\Codex\2026-08-30\d-yt-dlp-downloads-bv1yc1gbaekf-mkv\outputs\XY桌面播放器`
 
-- [ ] Resolve both deletion targets to exact absolute paths and re-measure them.
-- [ ] Verify the recovery branch commit exists and the working tree is clean.
-- [ ] Permanently remove only the two obsolete directories.
-- [ ] Verify both old paths are gone and report the recovered disk space.
+- [x] Resolve both deletion targets to exact absolute paths and re-measure them.
+- [x] Verify the recovery branch commit exists and the working tree is clean.
+- [x] Permanently remove only the two obsolete directories.
+- [x] Verify both old paths are gone and report the recovered disk space.
