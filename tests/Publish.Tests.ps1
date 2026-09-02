@@ -9,16 +9,18 @@ $fixtureRoot = Join-Path $repoRoot "artifacts\test-content-$testId"
 
 try {
     $requiredContentDirectories = @(
-        'static',
         'assets\covers',
-        'assets\audios',
-        'assets\lyrics'
+        'assets\songs',
+        'assets\lyrics\original',
+        'assets\lyrics\romanized'
     )
     foreach ($relativePath in $requiredContentDirectories) {
         New-Item -ItemType Directory -Force -Path (Join-Path $fixtureRoot $relativePath) | Out-Null
     }
-    Set-Content -LiteralPath (Join-Path $fixtureRoot 'index.html') -Value '<!doctype html><title>fixture</title>' -NoNewline
-    Set-Content -LiteralPath (Join-Path $fixtureRoot 'static\fixture.txt') -Value 'complete-package-fixture' -NoNewline
+    Set-Content -LiteralPath (Join-Path $fixtureRoot 'assets\covers\fixture.jpg') -Value 'cover' -NoNewline
+    Set-Content -LiteralPath (Join-Path $fixtureRoot 'assets\songs\fixture.flac') -Value 'audio' -NoNewline
+    Set-Content -LiteralPath (Join-Path $fixtureRoot 'assets\lyrics\original\fixture.lrc') -Value '[00:00.00]original' -NoNewline
+    Set-Content -LiteralPath (Join-Path $fixtureRoot 'assets\lyrics\romanized\fixture.lrc') -Value '[00:00.00]romanized' -NoNewline
 
     & (Join-Path $repoRoot 'tools\Publish.ps1') -Output $outputRoot -Content $fixtureRoot
 
@@ -40,8 +42,12 @@ try {
 
     $requiredFiles = @(
         'app\XYDesktopPlayer.exe',
-        'content\reference-player\index.html',
-        'content\reference-player\static\fixture.txt',
+        'content\player\index.html',
+        'content\themes\孤独摇滚\pack.json',
+        'content\themes\孤独摇滚\songs.json',
+        'content\themes\孤独摇滚\songs\fixture.flac',
+        'content\themes\孤独摇滚\covers\fixture.jpg',
+        'content\themes\孤独摇滚\lyrics\original\fixture.lrc',
         '双击这里-启动桌面壁纸.cmd',
         '普通窗口（备用）.cmd',
         '使用说明.txt'
@@ -69,6 +75,21 @@ try {
     $legacyNames = @($publishedEntries | Where-Object Name -Match 'Nikki')
     if ($legacyNames.Count -ne 0) {
         throw "Published package still exposes $($legacyNames.Count) Nikki-named entries."
+    }
+    if (@(Get-ChildItem -LiteralPath (Join-Path $outputRoot 'content\player\static\js') -File -Filter 'main.*.js').Count -ne 1) {
+        throw 'Published shared player does not contain exactly one production JavaScript bundle.'
+    }
+
+    foreach ($forbiddenPath in @(
+        'content\reference-player',
+        'content\themes\孤独摇滚\preview.gif',
+        'content\themes\孤独摇滚\project.json',
+        'content\themes\孤独摇滚\static',
+        'content\themes\孤独摇滚\audios'
+    )) {
+        if (Test-Path -LiteralPath (Join-Path $outputRoot $forbiddenPath)) {
+            throw "Published package retained obsolete content: $forbiddenPath"
+        }
     }
 
     $launcherPaths = @(

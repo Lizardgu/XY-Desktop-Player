@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "id": "bocchi",
+  "name": "孤独摇滚",
+  "author": "OriginalCube / XY桌面播放器移植",
+  "appearance": {
+    "textColor": "#FFFFFF",
+    "accentColor": "#ED709AE6"
+  }
+}

@@ -10,7 +10,7 @@ $repoRoot = Split-Path -Parent $PSScriptRoot
 $artifactRoot = Join-Path $repoRoot 'artifacts'
 $publishRoot = Join-Path $artifactRoot 'publish'
 if (-not $Output) {
-    $Output = Join-Path $publishRoot 'XY桌面播放器-v1.0.0-win-x64'
+    $Output = Join-Path $publishRoot 'XY桌面播放器-theme-skeleton-win-x64'
 }
 if (-not $Content) {
     $Content = Join-Path $repoRoot 'content\reference-player'
@@ -29,16 +29,28 @@ if (-not (Test-Path -LiteralPath $resolvedContent -PathType Container)) {
     throw "播放器内容目录不存在：$resolvedContent"
 }
 
-$requiredContentEntries = @(
-    'index.html',
-    'static',
+$requiredAssetEntries = @(
     'assets\covers',
-    'assets\audios',
-    'assets\lyrics'
+    'assets\songs',
+    'assets\lyrics\original',
+    'assets\lyrics\romanized'
 )
-foreach ($relativePath in $requiredContentEntries) {
+foreach ($relativePath in $requiredAssetEntries) {
     if (-not (Test-Path -LiteralPath (Join-Path $resolvedContent $relativePath))) {
         throw "播放器内容不完整，缺少：$relativePath"
+    }
+}
+
+$playerSource = Join-Path $repoRoot 'web\player'
+$themeDefinitionSource = Join-Path $repoRoot 'themes\bocchi'
+foreach ($requiredPath in @(
+    (Join-Path $playerSource 'index.html'),
+    (Join-Path $playerSource 'static'),
+    (Join-Path $themeDefinitionSource 'pack.json'),
+    (Join-Path $themeDefinitionSource 'songs.json')
+)) {
+    if (-not (Test-Path -LiteralPath $requiredPath)) {
+        throw "项目骨架不完整，缺少：$requiredPath"
     }
 }
 
@@ -65,10 +77,58 @@ try {
         '-p:DebugType=None' `
         '-p:DebugSymbols=false'
 
-    $packagedContentRoot = Join-Path $stagingRoot 'content\reference-player'
-    New-Item -ItemType Directory -Force -Path $packagedContentRoot | Out-Null
-    foreach ($entry in Get-ChildItem -LiteralPath $resolvedContent -Force) {
-        Copy-Item -LiteralPath $entry.FullName -Destination $packagedContentRoot -Recurse -Force
+    $packagedPlayerRoot = Join-Path $stagingRoot 'content\player'
+    $packagedThemeRoot = Join-Path $stagingRoot 'content\themes\孤独摇滚'
+    New-Item -ItemType Directory -Force -Path $packagedPlayerRoot, $packagedThemeRoot | Out-Null
+    foreach ($entry in Get-ChildItem -LiteralPath $playerSource -Force) {
+        Copy-Item -LiteralPath $entry.FullName -Destination $packagedPlayerRoot -Recurse -Force
+    }
+    Copy-Item -LiteralPath (Join-Path $themeDefinitionSource 'pack.json') -Destination $packagedThemeRoot
+    Copy-Item -LiteralPath (Join-Path $themeDefinitionSource 'songs.json') -Destination $packagedThemeRoot
+
+    foreach ($assetDirectory in @('covers', 'songs', 'lyrics')) {
+        Copy-Item `
+            -LiteralPath (Join-Path $resolvedContent "assets\$assetDirectory") `
+            -Destination $packagedThemeRoot `
+            -Recurse `
+            -Force
+    }
+
+    $sourceAssetRoot = Join-Path $resolvedContent 'assets'
+    $sourceAssetFiles = @(
+        foreach ($assetDirectory in @('covers', 'songs', 'lyrics')) {
+            Get-ChildItem -LiteralPath (Join-Path $sourceAssetRoot $assetDirectory) -File -Recurse -Force
+        }
+    )
+    $packagedAssetFiles = @(
+        foreach ($assetDirectory in @('covers', 'songs', 'lyrics')) {
+            Get-ChildItem -LiteralPath (Join-Path $packagedThemeRoot $assetDirectory) -File -Recurse -Force
+        }
+    )
+    if ($sourceAssetFiles.Count -ne $packagedAssetFiles.Count) {
+        throw "主题素材复制文件数不一致：来源 $($sourceAssetFiles.Count)，成品 $($packagedAssetFiles.Count)。"
+    }
+    $sourceBytes = ($sourceAssetFiles | Measure-Object -Property Length -Sum).Sum
+    $packagedBytes = ($packagedAssetFiles | Measure-Object -Property Length -Sum).Sum
+    if ($sourceBytes -ne $packagedBytes) {
+        throw "主题素材复制字节数不一致：来源 $sourceBytes，成品 $packagedBytes。"
+    }
+    $packagedByPath = @{}
+    foreach ($file in $packagedAssetFiles) {
+        $relative = [IO.Path]::GetRelativePath($packagedThemeRoot, $file.FullName).Replace('\', '/')
+        $packagedByPath[$relative] = $file
+    }
+    foreach ($sourceFile in $sourceAssetFiles) {
+        $relative = [IO.Path]::GetRelativePath($sourceAssetRoot, $sourceFile.FullName).Replace('\', '/')
+        $packagedFile = $packagedByPath[$relative]
+        if (-not $packagedFile -or $packagedFile.Length -ne $sourceFile.Length) {
+            throw "主题素材复制清单不一致：$relative"
+        }
+        $sourceHash = (Get-FileHash -LiteralPath $sourceFile.FullName -Algorithm SHA256).Hash
+        $packagedHash = (Get-FileHash -LiteralPath $packagedFile.FullName -Algorithm SHA256).Hash
+        if ($sourceHash -ne $packagedHash) {
+            throw "主题素材复制校验失败：$relative"
+        }
     }
 
     $launcherNames = @(

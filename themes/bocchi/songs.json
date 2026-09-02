@@ -1,0 +1,418 @@
+[
+  {
+    "title": "ギターと孤独と蒼い惑星",
+    "artist": "結束バンド",
+    "audio": "songs/Guitar, Loneliness and Blue Planet.flac",
+    "cover": "covers/Guitar, Loneliness and Blue Planet.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Guitar, Loneliness and Blue Planet.lrc",
+      "romanized": "lyrics/romanized/Guitar, Loneliness and Blue Planet.lrc"
+    },
+    "backgroundColor": "#4C2633",
+    "textColor": "#FFFFFF",
+    "accentColor": "#ED709AE6"
+  },
+  {
+    "title": "あのバンド",
+    "artist": "結束バンド",
+    "audio": "songs/That band.flac",
+    "cover": "covers/That band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/That band.lrc",
+      "romanized": "lyrics/romanized/That band.lrc"
+    },
+    "backgroundColor": "#0C3958",
+    "textColor": "#FFFFFF",
+    "accentColor": "#1A7CC3E6"
+  },
+  {
+    "title": "星座になれたら",
+    "artist": "結束バンド",
+    "audio": "songs/If I could be a constellation.flac",
+    "cover": "covers/If I could be a constellation.jpg",
+    "lyrics": {
+      "original": "lyrics/original/If I could be a constellation.lrc",
+      "romanized": "lyrics/romanized/If I could be a constellation.lrc"
+    },
+    "backgroundColor": "#580D24",
+    "textColor": "#FFFFFF",
+    "accentColor": "#E81A5BE6"
+  },
+  {
+    "title": "忘れてやらない",
+    "artist": "結束バンド",
+    "audio": "songs/Never forget.flac",
+    "cover": "covers/Never forget.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Never forget.lrc",
+      "romanized": "lyrics/romanized/Never forget.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  },
+  {
+    "title": "ひみつ基地",
+    "artist": "結束バンド",
+    "audio": "songs/Secret base.flac",
+    "cover": "covers/Kessoku Band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Secret base.lrc",
+      "romanized": "lyrics/romanized/Secret base.lrc"
+    },
+    "backgroundColor": "#40292F",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "転がる岩、君に朝が降る",
+    "artist": "結束バンド",
+    "audio": "songs/Rockn' Roll, Morning Light Falls on You.flac",
+    "cover": "covers/Rockn' Roll, Morning Light Falls on You.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Rockn' Roll, Morning Light Falls on You.lrc",
+      "romanized": "lyrics/romanized/Rockn' Roll, Morning Light Falls on You.lrc"
+    },
+    "backgroundColor": "#40292F",
+    "textColor": "#FFFFFF",
+    "accentColor": "#ED709AE6"
+  },
+  {
+    "title": "なにが悪い",
+    "artist": "結束バンド",
+    "audio": "songs/What is wrong with.flac",
+    "cover": "covers/What is wrong with.jpg",
+    "lyrics": {
+      "original": "lyrics/original/What is wrong with.lrc",
+      "romanized": "lyrics/romanized/What is wrong with.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  },
+  {
+    "title": "ラブソングが歌えない",
+    "artist": "結束バンド",
+    "audio": "songs/I can't sing a love song.flac",
+    "cover": "covers/Kessoku Band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/I can't sing a love song.lrc",
+      "romanized": "lyrics/romanized/I can't sing a love song.lrc"
+    },
+    "backgroundColor": "#40292F",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "カラカラ",
+    "artist": "結束バンド",
+    "audio": "songs/Karakara.flac",
+    "cover": "covers/Karakara.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Karakara.lrc",
+      "romanized": "lyrics/romanized/Karakara.lrc"
+    },
+    "backgroundColor": "#0C3958",
+    "textColor": "#FFFFFF",
+    "accentColor": "#1A7CC3E6"
+  },
+  {
+    "title": "小さな海",
+    "artist": "結束バンド",
+    "audio": "songs/The Little Sea.flac",
+    "cover": "covers/Kessoku Band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/The Little Sea.lrc",
+      "romanized": "lyrics/romanized/The Little Sea.lrc"
+    },
+    "backgroundColor": "#40292F",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "青春コンプレックス",
+    "artist": "結束バンド",
+    "audio": "songs/Seisyun Complex.flac",
+    "cover": "covers/Seisyun Complex.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Seisyun Complex.lrc",
+      "romanized": "lyrics/romanized/Seisyun Complex.lrc"
+    },
+    "backgroundColor": "#4D2E2C",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "Distortion!!",
+    "artist": "結束バンド",
+    "audio": "songs/Distortion!!.flac",
+    "cover": "covers/Distortion!!.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Distortion!!.lrc",
+      "romanized": "lyrics/romanized/Distortion!!.lrc"
+    },
+    "backgroundColor": "#580D22",
+    "textColor": "#FFFFFF",
+    "accentColor": "#E81A5BE6"
+  },
+  {
+    "title": "フラッシュバッカ",
+    "artist": "結束バンド",
+    "audio": "songs/Flashbacker.flac",
+    "cover": "covers/Kessoku Band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Flashbacker.lrc",
+      "romanized": "lyrics/romanized/Flashbacker.lrc"
+    },
+    "backgroundColor": "#40292F",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "ひとりぼっち東京",
+    "artist": "結束バンド",
+    "audio": "songs/Hitoribocchi Tokyo.flac",
+    "cover": "covers/Seisyun Complex.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Hitoribocchi Tokyo.lrc",
+      "romanized": "lyrics/romanized/Hitoribocchi Tokyo.lrc"
+    },
+    "backgroundColor": "#4D2E2C",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "ワタシダケユウレイ",
+    "artist": "結束バンド",
+    "audio": "songs/I'm the Only Ghost.flac",
+    "cover": "covers/I'm the Only Ghost.jpg",
+    "lyrics": {
+      "original": "lyrics/original/I'm the Only Ghost.lrc",
+      "romanized": "lyrics/romanized/I'm the Only Ghost.lrc"
+    },
+    "backgroundColor": "#40292F",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "光の中へ",
+    "artist": "結束バンド",
+    "audio": "songs/Into the Light.flac",
+    "cover": "covers/Into the Light.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Into the Light.lrc",
+      "romanized": "lyrics/romanized/Into the Light.lrc"
+    },
+    "backgroundColor": "#4E441A",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "青い春と西の空",
+    "artist": "結束バンド",
+    "audio": "songs/Blue Spring and Western Sky.flac",
+    "cover": "covers/Into the Light.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Blue Spring and Western Sky.lrc",
+      "romanized": "lyrics/romanized/Blue Spring and Western Sky.lrc"
+    },
+    "backgroundColor": "#4E441A",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "今、僕、アンダーグラウンドから",
+    "artist": "結束バンド",
+    "audio": "songs/Now, I'm going from underground.flac",
+    "cover": "covers/Shine as usual _ Now, I'm going from underground.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Now, I'm going from underground.lrc",
+      "romanized": "lyrics/romanized/Now, I'm going from underground.lrc"
+    },
+    "backgroundColor": "#0E0E0E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "月並みに輝け",
+    "artist": "結束バンド",
+    "audio": "songs/Shine as usual.flac",
+    "cover": "covers/Shine as usual _ Now, I'm going from underground.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Shine as usual.lrc",
+      "romanized": "lyrics/romanized/Shine as usual.lrc"
+    },
+    "backgroundColor": "#0E0E0E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "秒針少女",
+    "artist": "結束バンド",
+    "audio": "songs/Chronostasis.mp3",
+    "cover": "covers/Re_Kessoku Band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Chronostasis.lrc",
+      "romanized": "lyrics/romanized/Chronostasis.lrc"
+    },
+    "backgroundColor": "#4C2633",
+    "textColor": "#FFFFFF",
+    "accentColor": "#ED709AE6"
+  },
+  {
+    "title": "ドッペルゲンガー",
+    "artist": "結束バンド",
+    "audio": "songs/Doppelganger.mp3",
+    "cover": "covers/Doppelganger _ Re_Re_.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Doppelganger.lrc",
+      "romanized": "lyrics/romanized/Doppelganger.lrc"
+    },
+    "backgroundColor": "#0E0E0E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "僕と三原色",
+    "artist": "結束バンド",
+    "audio": "songs/Me and the three primary colors.mp3",
+    "cover": "covers/Re_Kessoku Band.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Me and the three primary colors.lrc",
+      "romanized": "lyrics/romanized/Me and the three primary colors.lrc"
+    },
+    "backgroundColor": "#4C2633",
+    "textColor": "#FFFFFF",
+    "accentColor": "#ED709AE6"
+  },
+  {
+    "title": "Re:Re:",
+    "artist": "結束バンド",
+    "audio": "songs/Re_Re_.mp3",
+    "cover": "covers/Doppelganger _ Re_Re_.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Re_Re_.lrc",
+      "romanized": "lyrics/romanized/Re_Re_.lrc"
+    },
+    "backgroundColor": "#0E0E0E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "惑う星",
+    "artist": "結束バンド",
+    "audio": "songs/Planet.mp3",
+    "cover": "covers/We will.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Planet.lrc",
+      "romanized": "lyrics/romanized/Planet.lrc"
+    },
+    "backgroundColor": "#4E441A",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "UNITE",
+    "artist": "結束バンド",
+    "audio": "songs/UNITE.mp3",
+    "cover": "covers/We will.jpg",
+    "lyrics": {
+      "original": "lyrics/original/UNITE.lrc",
+      "romanized": "lyrics/romanized/UNITE.lrc"
+    },
+    "backgroundColor": "#4E441A",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "夢を束ねて",
+    "artist": "結束バンド",
+    "audio": "songs/Bundle up your dreams.mp3",
+    "cover": "covers/We will.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Bundle up your dreams.lrc",
+      "romanized": "lyrics/romanized/Bundle up your dreams.lrc"
+    },
+    "backgroundColor": "#4E441A",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "milky way",
+    "artist": "結束バンド",
+    "audio": "songs/milky way.mp3",
+    "cover": "covers/We will.jpg",
+    "lyrics": {
+      "original": "lyrics/original/milky way.lrc",
+      "romanized": "lyrics/romanized/milky way.lrc"
+    },
+    "backgroundColor": "#4E441A",
+    "textColor": "#FFFFFF",
+    "accentColor": "#FFFFFFE6"
+  },
+  {
+    "title": "Cagayake!GIRLS",
+    "artist": "結束バンド",
+    "audio": "songs/Cagayake!GIRLS.mp3",
+    "cover": "covers/Kirara Tribute Collection.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Cagayake!GIRLS.lrc",
+      "romanized": "lyrics/romanized/Cagayake!GIRLS.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  },
+  {
+    "title": "Daydream café",
+    "artist": "結束バンド",
+    "audio": "songs/Daydream café.mp3",
+    "cover": "covers/Kirara Tribute Collection.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Daydream café.lrc",
+      "romanized": "lyrics/romanized/Daydream café.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  },
+  {
+    "title": "キルミーのベイベー！",
+    "artist": "結束バンド",
+    "audio": "songs/Kill Me no Baby!.mp3",
+    "cover": "covers/Kirara Tribute Collection.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Kill Me no Baby!.lrc",
+      "romanized": "lyrics/romanized/Kill Me no Baby!.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  },
+  {
+    "title": "SHINY DAYS",
+    "artist": "結束バンド",
+    "audio": "songs/SHINY DAYS.mp3",
+    "cover": "covers/Kirara Tribute Collection.jpg",
+    "lyrics": {
+      "original": "lyrics/original/SHINY DAYS.lrc",
+      "romanized": "lyrics/romanized/SHINY DAYS.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  },
+  {
+    "title": "Won(*3*)Chu KissMe!",
+    "artist": "結束バンド",
+    "audio": "songs/Won(_3_)Chu KissMe!.mp3",
+    "cover": "covers/Kirara Tribute Collection.jpg",
+    "lyrics": {
+      "original": "lyrics/original/Won(_3_)Chu KissMe!.lrc",
+      "romanized": "lyrics/romanized/Won(_3_)Chu KissMe!.lrc"
+    },
+    "backgroundColor": "#59420E",
+    "textColor": "#FFFFFF",
+    "accentColor": "#F7B41BE6"
+  }
+]

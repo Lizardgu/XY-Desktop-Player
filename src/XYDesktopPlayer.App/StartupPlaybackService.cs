@@ -10,77 +10,49 @@ internal sealed record StartupPlaybackResult(
 
 internal static class StartupPlaybackService
 {
-    public static async Task<StartupPlaybackResult> TryStartAsync(CoreWebView2 webView)
+    /// <summary>
+    /// Waits for the theme's audio to become prepared, then starts playback.
+    /// </summary>
+    /// <param name="webView">The player WebView2 instance.</param>
+    /// <param name="isBlocked">
+    /// Optional host-side check for whether playback should be blocked right now. When this
+    /// returns true at the moment audio is ready, playback is deliberately NOT started and a
+    /// <c>deferred-blocked</c> result is returned so the caller can retry later. This closes
+    /// the race where the old code waited up to three seconds for audio and then started
+    /// playing regardless of whatever window the user had opened in the meantime.
+    /// </param>
+    public static async Task<StartupPlaybackResult> TryStartAsync(
+        CoreWebView2 webView,
+        Func<bool>? isBlocked = null)
     {
         ArgumentNullException.ThrowIfNull(webView);
 
         try
         {
-            var request = JsonSerializer.Serialize(new
-            {
-                expression = """
-                    (async () => {
-                      const deadline = Date.now() + 3000;
-                      let playable = null;
-                      while (Date.now() < deadline) {
-                        const tracked = window.__xyDesktopTrackedAudio ?? [];
-                        const candidates = tracked.filter(audio =>
-                          audio?.src && !audio.src.includes('/keypress.mp3'));
-                        playable = candidates.find(audio => !audio.paused && !audio.ended) ??
-                          candidates.find(audio => !audio.ended) ??
-                          candidates[0] ?? null;
-                        if (playable) break;
-                        await new Promise(resolve => setTimeout(resolve, 50));
-                      }
-                      if (!playable) {
-                        return { started: false, source: null, error: 'no playable audio' };
-                      }
-                      try {
-                        window.__xyDesktopResumeAudioContext?.();
-                        await playable.play();
-                        return {
-                          started: !playable.paused,
-                          source: playable.src,
-                          error: playable.paused ? 'play returned while audio remained paused' : null
-                        };
-                      } catch (error) {
-                        return {
-                          started: false,
-                          source: playable.src,
-                          error: String(error?.message ?? error)
-                        };
-                      }
-                    })()
-                    """,
-                awaitPromise = true,
-                userGesture = true,
-                returnByValue = true
-            });
-            var rawResult = await webView.CallDevToolsProtocolMethodAsync(
-                "Runtime.evaluate",
-                request);
-            using var document = JsonDocument.Parse(rawResult);
-            var root = document.RootElement;
-            if (!root.TryGetProperty("result", out var runtimeResult) ||
-                !runtimeResult.TryGetProperty("value", out var value))
+            var ready = await WaitForAudioReadyAsync(webView);
+            if (!ready)
             {
                 return new StartupPlaybackResult(
                     Started: false,
                     Source: null,
-                    Error: "WebView 未返回启动播放结果。");
+                    Error: "theme audio is not ready");
             }
 
-            var started = value.TryGetProperty("started", out var startedProperty) &&
-                          startedProperty.GetBoolean();
-            var source = value.TryGetProperty("source", out var sourceProperty) &&
-                         sourceProperty.ValueKind == JsonValueKind.String
-                ? sourceProperty.GetString()
-                : null;
-            var error = value.TryGetProperty("error", out var errorProperty) &&
-                        errorProperty.ValueKind == JsonValueKind.String
-                ? errorProperty.GetString()
-                : null;
-            return new StartupPlaybackResult(started, source, error);
+            if (isBlocked is not null && isBlocked())
+            {
+                return new StartupPlaybackResult(
+                    Started: false,
+                    Source: "deferred-blocked",
+                    Error: null);
+            }
+
+            var started = await StartPlaybackAsync(webView);
+            return started
+                ? new StartupPlaybackResult(Started: true, Source: "theme-ready", Error: null)
+                : new StartupPlaybackResult(
+                    Started: false,
+                    Source: null,
+                    Error: "start playback returned false");
         }
         catch (Exception exception)
         {
@@ -88,6 +60,128 @@ internal static class StartupPlaybackService
                 Started: false,
                 Source: null,
                 Error: exception.Message);
+        }
+    }
+
+    private static async Task<bool> WaitForAudioReadyAsync(CoreWebView2 webView)
+    {
+        var request = JsonSerializer.Serialize(new
+        {
+            expression = """
+                (async () => {
+                  const deadline = Date.now() + 3000;
+                  while (Date.now() < deadline) {
+                    const state = window.__xyDesktopGetPlayerState?.();
+                    if (typeof window.__xyDesktopStartPlayback === 'function' && state?.audioPrepared) {
+                      return true;
+                    }
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                  }
+                  return false;
+                })()
+                """,
+            awaitPromise = true,
+            returnByValue = true
+        });
+        var rawResult = await webView.CallDevToolsProtocolMethodAsync(
+            "Runtime.evaluate",
+            request);
+        return ParseBooleanResult(rawResult);
+    }
+
+    private static async Task<bool> StartPlaybackAsync(CoreWebView2 webView)
+    {
+        var request = JsonSerializer.Serialize(new
+        {
+            expression = """
+                (async () => await window.__xyDesktopStartPlayback())()
+                """,
+            awaitPromise = true,
+            userGesture = true,
+            returnByValue = true
+        });
+        var rawResult = await webView.CallDevToolsProtocolMethodAsync(
+            "Runtime.evaluate",
+            request);
+        return ParseBooleanResult(rawResult);
+    }
+
+    private static bool ParseBooleanResult(string rawResult)
+    {
+        try
+        {
+            using var document = JsonDocument.Parse(rawResult);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("result", out var runtimeResult) ||
+                !runtimeResult.TryGetProperty("value", out var value))
+            {
+                return false;
+            }
+
+            if (value.ValueKind == JsonValueKind.True)
+            {
+                return true;
+            }
+
+            if (value.ValueKind == JsonValueKind.String)
+            {
+                var text = value.GetString();
+                if (text is "true" or "True")
+                {
+                    return true;
+                }
+
+                // The shim returns an object like { started: boolean, source: string }.
+                if (!string.IsNullOrEmpty(text) &&
+                    text.StartsWith("{", StringComparison.Ordinal))
+                {
+                    using var inner = JsonDocument.Parse(text);
+                    return inner.RootElement.TryGetProperty("started", out var started) &&
+                           started.ValueKind == JsonValueKind.True;
+                }
+            }
+
+            return false;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static async Task<bool> GetManualPausedAsync(CoreWebView2 webView)
+    {
+        ArgumentNullException.ThrowIfNull(webView);
+        try
+        {
+            var result = await webView.ExecuteScriptAsync(
+                "Boolean(window.__xyDesktopGetPlayerState?.().manualPaused)");
+            return JsonSerializer.Deserialize<bool>(result);
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    public static async Task ApplyManualPausedAsync(CoreWebView2 webView, bool paused)
+    {
+        ArgumentNullException.ThrowIfNull(webView);
+        var value = paused ? "true" : "false";
+        await webView.ExecuteScriptAsync(
+            $"window.__xyDesktopApplyManualPaused?.({value})");
+    }
+
+    public static async Task ReleaseAsync(CoreWebView2 webView)
+    {
+        ArgumentNullException.ThrowIfNull(webView);
+        try
+        {
+            await webView.ExecuteScriptAsync("window.__xyDesktopReleasePlayer?.()");
+        }
+        catch
+        {
+            // Navigation and shutdown may invalidate the page before release completes.
         }
     }
 }

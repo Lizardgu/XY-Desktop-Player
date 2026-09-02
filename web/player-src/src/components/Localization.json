@@ -1,0 +1,20 @@
+{
+    "en-us": {
+        "default": "Default",
+        "playlistNumber": "Playlist %d",
+        "removeCurrentSong": "Remove Current Song"
+    },
+    "es-es": {
+        "default": "Por defecto",
+        "playlistNumber": "Playlist %d"
+    },
+    "ja-jp": {
+        "default": "既定",
+        "playlistNumber": "プレイリスト %d"
+    },
+    "zh-chs": {
+        "default": "默认歌单",
+        "playlistNumber": "歌单 %d",
+        "removeCurrentSong": "从歌单移除当前歌曲"
+    }
+}

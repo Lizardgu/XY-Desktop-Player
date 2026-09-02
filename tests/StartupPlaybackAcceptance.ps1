@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [string] $Content
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -106,7 +108,7 @@ public static class StartupDeferralAcceptanceNative
     [StartupDeferralAcceptanceNative]::ForceForeground($testWindow.Handle)
 
     $captureScript = Join-Path $repoRoot 'tools\Run-CaptureTest.ps1'
-    $contentRoot = Join-Path $repoRoot 'content\reference-player'
+    $contentRoot = if ($Content) { $Content } else { Join-Path $repoRoot 'content\reference-player' }
     $hostExecutable = (Get-Process -Id $PID).Path
     $captureProcess = Start-Process `
         -FilePath $hostExecutable `

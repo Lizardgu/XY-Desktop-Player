@@ -49,8 +49,6 @@ internal sealed class DesktopInteractionController : IDisposable
         return false;
     }
 
-    public void RefreshIconMask() => _iconMaskProvider.RefreshNow();
-
     public void Stop()
     {
         _mouseObserver.Stop();

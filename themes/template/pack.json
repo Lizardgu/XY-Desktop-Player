@@ -1,0 +1,10 @@
+{
+  "format": 1,
+  "id": "replace-with-theme-id",
+  "name": "替换为主题名称",
+  "author": "替换为作者名称",
+  "appearance": {
+    "textColor": "#FFFFFF",
+    "accentColor": "#F2B8D5"
+  }
+}

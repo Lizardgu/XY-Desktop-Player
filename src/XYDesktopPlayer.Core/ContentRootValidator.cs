@@ -26,13 +26,7 @@ public static class ContentRootValidator
             missingEntries.Add("index.html");
         }
 
-        foreach (var relativeDirectory in new[]
-                 {
-                     "static",
-                     "assets/covers",
-                     "assets/audios",
-                     "assets/lyrics"
-                 })
+        foreach (var relativeDirectory in new[] { "static" })
         {
             if (!Directory.Exists(Path.Combine(resolvedRoot, relativeDirectory)))
             {

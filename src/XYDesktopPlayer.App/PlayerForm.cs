@@ -8,7 +8,10 @@ namespace XYDesktopPlayer.App;
 
 internal sealed class PlayerForm : Form
 {
+    private static readonly JsonSerializerOptions WebJsonOptions = new(JsonSerializerDefaults.Web);
     private readonly WebContentMapping _mapping;
+    private readonly ThemePack _builtInTheme;
+    private readonly ApplicationPaths _paths;
     private readonly string _userDataRoot;
     private readonly HostMode _requestedMode;
     private readonly string? _capturePath;
@@ -21,28 +24,48 @@ internal sealed class PlayerForm : Form
     private ToolStripMenuItem? _windowModeItem;
     private ToolStripMenuItem? _wallpaperModeItem;
     private ToolStripMenuItem? _desktopInteractionItem;
+    private ToolStripMenuItem? _themesItem;
     private DesktopInteractionController? _desktopInteraction;
-    private FullscreenPlaybackController? _fullscreenPlayback;
+    private ForegroundPlaybackController? _foregroundPlayback;
+    private ThemeDirectoryMonitor? _themeMonitor;
+    private ThemeCatalogResult _themeCatalog;
+    private ThemePack _currentTheme;
     private HostMode _currentMode;
     private bool _initialized;
     private bool _captureCompleted;
     private bool _webViewReady;
+    private bool _themePayloadSent;
+    private bool _themeReady;
     private bool _startupPlaybackStarted;
     private string? _startupPlaybackError;
     private bool _desktopInteractionEnabled = true;
     private bool _interactionFailureReported;
+    private bool _pendingManualPause;
+    private string? _settingsWarning;
 
     public PlayerForm(
         WebContentMapping mapping,
+        ThemePack builtInTheme,
+        ApplicationPaths paths,
         string userDataRoot,
         HostMode requestedMode,
         string? capturePath)
     {
         _mapping = mapping;
+        _builtInTheme = builtInTheme;
+        _paths = paths;
         _userDataRoot = userDataRoot;
         _requestedMode = requestedMode;
         _currentMode = requestedMode;
         _capturePath = capturePath is null ? null : Path.GetFullPath(capturePath);
+        var settings = PlayerSettingsStore.Load(_paths.Settings);
+        _settingsWarning = settings.Warning;
+        _themeCatalog = ThemeCatalog.Scan(_builtInTheme, _paths.Themes);
+        _currentTheme = ThemeSelectionPolicy.Select(
+            _themeCatalog.Themes,
+            settings.Settings.SelectedThemeId,
+            defaultThemeId: null,
+            _builtInTheme.Id);
         TraceCapture("form-created");
         _taskbarCreatedMessage = NativeMethods.RegisterWindowMessage("TaskbarCreated");
 
@@ -79,10 +102,11 @@ internal sealed class PlayerForm : Form
         if (requestedMode == HostMode.Wallpaper)
         {
             ConfigureWallpaperSurface();
-            if (_capturePath is null)
-            {
-                CreateTrayIcon();
-            }
+        }
+
+        if (_capturePath is null)
+        {
+            CreateTrayIcon();
         }
     }
 
@@ -120,6 +144,7 @@ internal sealed class PlayerForm : Form
                 _mapping.VirtualHostName,
                 _mapping.ResolvedContentRoot,
                 CoreWebView2HostResourceAccessKind.Allow);
+            ApplyThemeHostMapping();
             TraceCapture("virtual-host-mapped");
             TraceCapture("adding-document-script");
             await _webView.CoreWebView2.AddScriptToExecuteOnDocumentCreatedAsync(
@@ -130,15 +155,21 @@ internal sealed class PlayerForm : Form
             {
                 TraceCapture("navigation-starting");
                 _webViewReady = false;
+                _themePayloadSent = false;
+                _themeReady = false;
                 _startupPlaybackStarted = false;
                 _startupPlaybackError = null;
                 _desktopInteraction?.Stop();
-                _fullscreenPlayback?.Stop();
+                _foregroundPlayback?.Stop();
                 UpdateDesktopInteractionMenu();
             };
+            _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
             _webView.NavigationCompleted += OnNavigationCompleted;
             _webView.Source = _mapping.StartUri;
             TraceCapture("navigation-requested");
+            _themeMonitor = new ThemeDirectoryMonitor(_paths.Themes);
+            _themeMonitor.RefreshRequested += OnThemeRefreshRequested;
+            _themeMonitor.Start();
         }
         catch (Exception exception)
         {
@@ -154,14 +185,14 @@ internal sealed class PlayerForm : Form
         }
     }
 
-    private async void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
+    private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
     {
         TraceCapture($"navigation-completed: success={eventArgs.IsSuccess}; status={eventArgs.WebErrorStatus}");
         if (!eventArgs.IsSuccess)
         {
             _webViewReady = false;
             _desktopInteraction?.Stop();
-            _fullscreenPlayback?.Stop();
+            _foregroundPlayback?.Stop();
             _statusLabel.Text = $"页面加载失败：{eventArgs.WebErrorStatus}";
             CenterStatusLabel();
             if (_capturePath is not null)
@@ -179,36 +210,119 @@ internal sealed class PlayerForm : Form
             ? "XY桌面播放器 - 桌面模式"
             : "XY桌面播放器 - 独立窗口";
         UpdateDesktopInteraction(showError: false);
-        _fullscreenPlayback ??= new FullscreenPlaybackController(_webView);
-        if (_fullscreenPlayback.IsPlaybackBlocked())
-        {
-            TraceCapture("startup-playback-deferred: another application is in front");
-            _fullscreenPlayback.Start(
-                startupPending: true,
-                startPendingPlayback: StartInitialPlaybackAsync);
-        }
-        else
-        {
-            await StartInitialPlaybackAsync();
-            _fullscreenPlayback.Start();
-        }
+    }
 
-        if (_capturePath is not null && !_captureCompleted)
+    private async void OnWebMessageReceived(object? sender, CoreWebView2WebMessageReceivedEventArgs eventArgs)
+    {
+        try
         {
-            _captureCompleted = true;
-            await CaptureLoadedPlayerAsync(_capturePath);
+            if (!eventArgs.Source.StartsWith(
+                    $"https://{_mapping.VirtualHostName}/",
+                    StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+
+            using var document = JsonDocument.Parse(eventArgs.WebMessageAsJson);
+            var root = document.RootElement;
+            if (!root.TryGetProperty("type", out var type))
+            {
+                return;
+            }
+
+            if (type.GetString() == "player-ready")
+            {
+                if (_themePayloadSent)
+                {
+                    return;
+                }
+
+                TraceCapture("player-ready");
+                await SendCurrentThemeAsync();
+                _themePayloadSent = true;
+                return;
+            }
+
+            if (type.GetString() != "theme-ready" ||
+                !root.TryGetProperty("themeId", out var themeId) ||
+                themeId.GetString() != _currentTheme.Id)
+            {
+                return;
+            }
+
+            if (_themeReady)
+            {
+                return;
+            }
+
+            _themeReady = true;
+            var songCount = root.TryGetProperty("songCount", out var count) ? count.GetInt32() : 0;
+            TraceCapture($"theme-ready: id={_currentTheme.Id}; songs={songCount}");
+            _foregroundPlayback ??= new ForegroundPlaybackController(_webView, logDirectory: _paths.Logs);
+            if (_pendingManualPause)
+            {
+                await StartupPlaybackService.ApplyManualPausedAsync(_webView.CoreWebView2, paused: true);
+                _foregroundPlayback.Start();
+                TraceCapture("startup-playback-skipped: manual pause preserved");
+            }
+            else
+            {
+                var started = await StartInitialPlaybackAsync();
+                _foregroundPlayback.Start();
+                if (!started)
+                {
+                    // Audio became ready while a window was open, or is not ready yet: arm the
+                    // deferred-start path so the controller retries once the desktop is clear.
+                    _foregroundPlayback.BeginPendingStart(StartInitialPlaybackAsync);
+                    TraceCapture("startup-playback-deferred: will retry when the desktop is clear");
+                }
+            }
+
+            if (_capturePath is not null && !_captureCompleted)
+            {
+                _captureCompleted = true;
+                await CaptureLoadedPlayerAsync(_capturePath);
+            }
+        }
+        catch (Exception exception)
+        {
+            TraceCapture($"theme-message-error: {exception}");
+            _statusLabel.Text = "主题加载失败";
+            _statusLabel.Visible = true;
+            CenterStatusLabel();
         }
     }
 
-    private async Task StartInitialPlaybackAsync()
+    private Task SendCurrentThemeAsync()
+    {
+        ApplyThemeHostMapping();
+        var payload = ThemeRuntimePayloadFactory.Create(_currentTheme);
+        _webView.CoreWebView2.PostWebMessageAsJson(
+            JsonSerializer.Serialize(payload, WebJsonOptions));
+        TraceCapture($"theme-sent: id={_currentTheme.Id}; songs={payload.Songs.Count}");
+        return Task.CompletedTask;
+    }
+
+    private void ApplyThemeHostMapping()
+    {
+        var themeMapping = ThemeWebContentMapping.Create(_currentTheme);
+        _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
+            themeMapping.VirtualHostName,
+            themeMapping.ResolvedAssetRoot,
+            CoreWebView2HostResourceAccessKind.Allow);
+    }
+
+    private async Task<bool> StartInitialPlaybackAsync()
     {
         var startupPlayback = await StartupPlaybackService.TryStartAsync(
-            _webView.CoreWebView2);
+            _webView.CoreWebView2,
+            isBlocked: () => _foregroundPlayback?.IsPlaybackBlocked() ?? false);
         _startupPlaybackStarted = startupPlayback.Started;
         _startupPlaybackError = startupPlayback.Error;
         TraceCapture(
             $"startup-playback-completed: started={startupPlayback.Started}; " +
             $"source={startupPlayback.Source}; error={startupPlayback.Error}");
+        return startupPlayback.Started;
     }
 
     private async Task CaptureLoadedPlayerAsync(string capturePath)
@@ -303,13 +417,15 @@ internal sealed class PlayerForm : Form
                         desktopIconMaskValid = _desktopInteraction?.IconMaskValid == true,
                         desktopIconRectangleCount = _desktopInteraction?.IconRectangleCount ?? 0,
                         desktopInteractionError = _desktopInteraction?.LastError,
-                        fullscreenMonitorRunning = _fullscreenPlayback?.IsRunning == true,
-                        fullscreenPauseCount = _fullscreenPlayback?.PauseCount ?? 0,
-                        fullscreenResumeCount = _fullscreenPlayback?.ResumeCount ?? 0,
-                        maximizedWindowObservationCount = _fullscreenPlayback?.MaximizedWindowObservationCount ?? 0,
-                        fullscreenMonitorError = _fullscreenPlayback?.LastError,
+                        foregroundMonitorRunning = _foregroundPlayback?.IsRunning == true,
+                        foregroundPauseCount = _foregroundPlayback?.PauseCount ?? 0,
+                        foregroundResumeCount = _foregroundPlayback?.ResumeCount ?? 0,
+                        foregroundMonitorError = _foregroundPlayback?.LastError,
                         startupPlaybackStarted = _startupPlaybackStarted,
                         startupPlaybackError = _startupPlaybackError,
+                        selectedThemeId = _currentTheme.Id,
+                        themeSongCount = _currentTheme.Songs.Count,
+                        themeReady = _themeReady,
                         manualPausePreserved
                     },
                     new JsonSerializerOptions { WriteIndented = true }));
@@ -326,10 +442,11 @@ internal sealed class PlayerForm : Form
             var desktopModeVerified = _requestedMode != HostMode.Wallpaper ||
                                       (_desktopHost.IsAttached &&
                                        _desktopHost.AttachedParentClassName == "WorkerW");
+            var themeVerified = _themeReady && _currentTheme.Songs.Count > 0;
 
             ExitCode = ready && hasApp && hasLoadedImage && shimInstalled &&
                        hasTrackedAudio && audioAdvanced && captureWritten && desktopModeVerified &&
-                       manualPausePreserved && _startupPlaybackStarted
+                       themeVerified && manualPausePreserved && _startupPlaybackStarted
                 ? 0
                 : 6;
             TraceCapture($"capture-finished: exit={ExitCode}");
@@ -394,16 +511,30 @@ internal sealed class PlayerForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs eventArgs)
     {
+        _themeMonitor?.Stop();
         _desktopInteraction?.Stop();
-        _fullscreenPlayback?.Stop();
+        _foregroundPlayback?.Stop();
+        if (_webView.CoreWebView2 is not null)
+        {
+            _ = StartupPlaybackService.ReleaseAsync(_webView.CoreWebView2);
+        }
         _desktopHost.Detach(hideHostWindow: true);
         base.OnFormClosing(eventArgs);
     }
 
     protected override void OnFormClosed(FormClosedEventArgs eventArgs)
     {
+        if (_webView.CoreWebView2 is not null)
+        {
+            _webView.CoreWebView2.WebMessageReceived -= OnWebMessageReceived;
+        }
+        if (_themeMonitor is not null)
+        {
+            _themeMonitor.RefreshRequested -= OnThemeRefreshRequested;
+            _themeMonitor.Dispose();
+        }
         _desktopInteraction?.Dispose();
-        _fullscreenPlayback?.Dispose();
+        _foregroundPlayback?.Dispose();
         _trayIcon?.Dispose();
         _trayMenu?.Dispose();
         _desktopHost.Dispose();
@@ -429,7 +560,11 @@ internal sealed class PlayerForm : Form
         };
         _desktopInteractionItem.Click += (_, _) => ToggleDesktopInteraction();
         _trayMenu.Items.Add(_desktopInteractionItem);
-        _trayMenu.Items.Add("重新加载播放器", null, (_, _) => _webView.CoreWebView2?.Reload());
+        _themesItem = new ToolStripMenuItem("主题");
+        _trayMenu.Items.Add(_themesItem);
+        RebuildThemeMenu();
+        _trayMenu.Items.Add("重新加载播放器", null, async (_, _) => await ReloadCurrentThemeAsync());
+        _trayMenu.Items.Add("导出窗口检测诊断", null, (_, _) => ExportWindowDiagnostics());
         _trayMenu.Items.Add(new ToolStripSeparator());
         _trayMenu.Items.Add("退出XY桌面播放器", null, (_, _) => Close());
 
@@ -442,6 +577,197 @@ internal sealed class PlayerForm : Form
         };
         _trayIcon.DoubleClick += (_, _) => SwitchToWindowMode();
         UpdateHostModeMenu();
+        if (!string.IsNullOrWhiteSpace(_settingsWarning))
+        {
+            _trayIcon.ShowBalloonTip(
+                5000,
+                "XY桌面播放器",
+                _settingsWarning,
+                ToolTipIcon.Warning);
+        }
+    }
+
+    private void RebuildThemeMenu()
+    {
+        if (_themesItem is null)
+        {
+            return;
+        }
+
+        _themesItem.DropDownItems.Clear();
+        foreach (var entry in ThemeMenuModel.Create(_themeCatalog.Themes, _currentTheme.Id))
+        {
+            var label = entry.IsBuiltIn ? $"{entry.Name}（内置）" : entry.Name;
+            var item = new ToolStripMenuItem(label)
+            {
+                Checked = entry.IsChecked,
+                CheckOnClick = false,
+                Tag = entry.Id
+            };
+            item.Click += async (_, _) => await SwitchThemeAsync(entry.Id);
+            _themesItem.DropDownItems.Add(item);
+        }
+
+        _themesItem.DropDownItems.Add(new ToolStripSeparator());
+        _themesItem.DropDownItems.Add(
+            "打开主题安装目录",
+            null,
+            (_, _) => OpenThemesDirectory());
+        _themesItem.DropDownItems.Add(
+            "重新扫描主题",
+            null,
+            (_, _) => RefreshThemeCatalog(showDiagnostics: true));
+    }
+
+    private async Task SwitchThemeAsync(string themeId)
+    {
+        var target = _themeCatalog.Themes.FirstOrDefault(theme =>
+            string.Equals(theme.Id, themeId, StringComparison.Ordinal));
+        if (target is null || string.Equals(target.Id, _currentTheme.Id, StringComparison.Ordinal))
+        {
+            return;
+        }
+
+        if (_webView.CoreWebView2 is not null)
+        {
+            _pendingManualPause = _webViewReady && _themeReady &&
+                                  await StartupPlaybackService.GetManualPausedAsync(_webView.CoreWebView2);
+            await StartupPlaybackService.ReleaseAsync(_webView.CoreWebView2);
+        }
+        _currentTheme = target;
+        var save = PlayerSettingsStore.Save(
+            _paths.Settings,
+            new PlayerSettings(_currentTheme.Id));
+        if (!save.IsSuccess)
+        {
+            _trayIcon?.ShowBalloonTip(
+                5000,
+                "XY桌面播放器",
+                save.Error ?? "主题选择未能保存。",
+                ToolTipIcon.Warning);
+        }
+
+        RebuildThemeMenu();
+        _webView.CoreWebView2?.Reload();
+    }
+
+    private async Task ReloadCurrentThemeAsync()
+    {
+        if (_webView.CoreWebView2 is null)
+        {
+            return;
+        }
+
+        _pendingManualPause = _webViewReady && _themeReady &&
+                              await StartupPlaybackService.GetManualPausedAsync(_webView.CoreWebView2);
+        await StartupPlaybackService.ReleaseAsync(_webView.CoreWebView2);
+        var refreshed = ThemePackLoader.Load(
+            _currentTheme.DefinitionRoot,
+            _currentTheme.AssetRoot,
+            _currentTheme.IsBuiltIn);
+        if (refreshed.IsValid && refreshed.Theme is not null)
+        {
+            _currentTheme = refreshed.Theme;
+            _themeCatalog = new ThemeCatalogResult(
+                _themeCatalog.Themes.Select(theme =>
+                        string.Equals(theme.Id, _currentTheme.Id, StringComparison.Ordinal)
+                            ? _currentTheme
+                            : theme)
+                    .ToArray(),
+                _themeCatalog.Diagnostics);
+        }
+        else
+        {
+            _trayIcon?.ShowBalloonTip(
+                5000,
+                "XY桌面播放器",
+                refreshed.Error ?? "当前主题重新加载失败。",
+                ToolTipIcon.Warning);
+            return;
+        }
+
+        RebuildThemeMenu();
+        _webView.CoreWebView2.Reload();
+    }
+
+    private void OnThemeRefreshRequested(object? sender, EventArgs eventArgs)
+    {
+        if (IsDisposed || !IsHandleCreated)
+        {
+            return;
+        }
+
+        BeginInvoke(() => RefreshThemeCatalog(showDiagnostics: false));
+    }
+
+    private void RefreshThemeCatalog(bool showDiagnostics)
+    {
+        var refreshedCatalog = ThemeCatalog.Scan(_builtInTheme, _paths.Themes);
+        var currentStillExists = refreshedCatalog.Themes.Any(theme =>
+            string.Equals(theme.Id, _currentTheme.Id, StringComparison.Ordinal));
+        _themeCatalog = refreshedCatalog;
+        if (!currentStillExists)
+        {
+            _ = SwitchThemeAsync(_builtInTheme.Id);
+        }
+        else
+        {
+            RebuildThemeMenu();
+        }
+
+        if (showDiagnostics && refreshedCatalog.Diagnostics.Count > 0)
+        {
+            var message = string.Join(
+                Environment.NewLine,
+                refreshedCatalog.Diagnostics.Take(4).Select(diagnostic => diagnostic.Message));
+            _trayIcon?.ShowBalloonTip(
+                6000,
+                "部分主题未能读取",
+                message,
+                ToolTipIcon.Warning);
+        }
+    }
+
+    private void OpenThemesDirectory()
+    {
+        Directory.CreateDirectory(_paths.Themes);
+        System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+        {
+            FileName = _paths.Themes,
+            UseShellExecute = true
+        });
+    }
+
+    private void ExportWindowDiagnostics()
+    {
+        var path = _foregroundPlayback?.ExportDiagnostics();
+        if (path is null)
+        {
+            _trayIcon?.ShowBalloonTip(
+                4000,
+                "XY桌面播放器",
+                "窗口检测诊断当前不可用。",
+                ToolTipIcon.Warning);
+            return;
+        }
+
+        _trayIcon?.ShowBalloonTip(
+            6000,
+            "XY桌面播放器",
+            $"窗口检测诊断已导出：\n{path}",
+            ToolTipIcon.Info);
+        try
+        {
+            System.Diagnostics.Process.Start(new System.Diagnostics.ProcessStartInfo
+            {
+                FileName = path,
+                UseShellExecute = true
+            });
+        }
+        catch
+        {
+            // Opening the file is best-effort; the path is already shown in the balloon.
+        }
     }
 
     private void TryAttachToDesktop(bool showError)

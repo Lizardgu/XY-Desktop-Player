@@ -38,8 +38,8 @@ if ($solution -notmatch 'src\\XYDesktopPlayer\.App\\XYDesktopPlayer\.App\.csproj
 if ($mapping -notmatch 'xydesktop\.local') {
     throw 'WebView virtual host is not xydesktop.local.'
 }
-if ($publish -notmatch "XY桌面播放器-v1\.0\.0-win-x64") {
-    throw 'Publish.ps1 does not default to the versioned XY package directory.'
+if ($publish -notmatch "XY桌面播放器-theme-skeleton-win-x64") {
+    throw 'Publish.ps1 does not default to the theme-skeleton candidate directory.'
 }
 if ($primaryLauncher -notmatch 'app\\XYDesktopPlayer\.exe') {
     throw 'Primary launcher does not start XYDesktopPlayer.exe.'

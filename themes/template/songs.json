@@ -1,0 +1,14 @@
+[
+  {
+    "title": "替换为歌曲名称",
+    "artist": "替换为歌手名称",
+    "audio": "audio/01.mp3",
+    "cover": "images/covers/01.png",
+    "lyrics": {
+      "original": "lyrics/01.lrc"
+    },
+    "backgroundColor": "#3C2946",
+    "textColor": "#FFF8EC",
+    "accentColor": "#F6B44A"
+  }
+]

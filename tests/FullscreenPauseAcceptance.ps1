@@ -1,5 +1,7 @@
 [CmdletBinding()]
-param()
+param(
+    [string] $Content
+)
 
 $ErrorActionPreference = 'Stop'
 $repoRoot = Split-Path -Parent $PSScriptRoot
@@ -83,7 +85,7 @@ public static class ForegroundBootstrapNative
     $testWindow.Activate()
 
     $captureScript = Join-Path $repoRoot 'tools\Run-CaptureTest.ps1'
-    $contentRoot = Join-Path $repoRoot 'content\reference-player'
+    $contentRoot = if ($Content) { $Content } else { Join-Path $repoRoot 'content\reference-player' }
     $hostExecutable = (Get-Process -Id $PID).Path
     $testStart = Get-Date
     $captureProcess = Start-Process `
@@ -255,17 +257,17 @@ public static class ForegroundAcceptanceNative
 
     $hostResult = Get-Content -Raw -LiteralPath $hostPath | ConvertFrom-Json
     $domResult = Get-Content -Raw -LiteralPath $domPath | ConvertFrom-Json
-    if ($hostResult.fullscreenPauseCount -lt 1) {
+    if ($hostResult.foregroundPauseCount -lt 1) {
         throw '真实普通大小窗口进入前台后没有触发自动暂停。'
     }
-    if ($hostResult.fullscreenResumeCount -lt 1) {
+    if ($hostResult.foregroundResumeCount -lt 1) {
         throw '焦点交回播放器后没有触发自动恢复。'
     }
     if (-not $hostResult.manualPausePreserved) {
         throw '手动暂停保护验证失败。'
     }
-    if ($hostResult.fullscreenMonitorError) {
-        throw "前台应用监控报告错误：$($hostResult.fullscreenMonitorError)"
+    if ($hostResult.foregroundMonitorError) {
+        throw "前台应用监控报告错误：$($hostResult.foregroundMonitorError)"
     }
     if ($domResult.maxAudioTime -le 0.25) {
         throw '音频没有实际开始播放。'
@@ -277,7 +279,7 @@ public static class ForegroundAcceptanceNative
         throw "真实自动暂停没有在合理的 500 毫秒淡出窗口完成：$($domResult.lastFadeElapsedMs) ms"
     }
 
-    Write-Host "PASS real foreground app fade=$([Math]::Round($domResult.lastFadeElapsedMs))ms, pause=$($hostResult.fullscreenPauseCount), resume=$($hostResult.fullscreenResumeCount), manual pause preserved"
+    Write-Host "PASS real foreground app fade=$([Math]::Round($domResult.lastFadeElapsedMs))ms, pause=$($hostResult.foregroundPauseCount), resume=$($hostResult.foregroundResumeCount), manual pause preserved"
 }
 finally {
     if ($testWindow) {

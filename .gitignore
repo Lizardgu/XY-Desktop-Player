@@ -10,6 +10,9 @@
 .packages/
 .dotnet/
 .dotnet-home/
+.pnpm-store/
+**/node_modules/
+web/player-src/build/
 
 # Imported or generated runtime content
 content/**
