@@ -27,7 +27,7 @@
 从源码宿主和最终候选目录各运行一次捕获：
 
 - 页面地址：`https://xydesktop.local/index.html`
-- 主题素材地址：`https://theme.xydesktop.local/...`
+- 主题素材地址：每个主题使用独立地址，例如 `https://theme-bocchi.xydesktop.local/...`
 - 当前主题：`bocchi`
 - 歌曲数量：32
 - 页面图片：11/11 成功加载

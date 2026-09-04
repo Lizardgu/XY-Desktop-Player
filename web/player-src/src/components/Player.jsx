@@ -5,6 +5,7 @@ const Player = ({
   song,
   audioRef,
   userPaused,
+  autoPaused,
   hostPlaybackAllowed,
   onManualPause,
   onAudioPrepared,
@@ -15,6 +16,7 @@ const Player = ({
   textSize,
   icon,
   playEffect,
+  themeEpoch,
 }) => {
   const [trackProgress, setProgress] = React.useState(0);
   const [volume, setVolume] = React.useState(() => {
@@ -25,7 +27,7 @@ const Player = ({
   const [duration, setDuration] = React.useState(0);
   const volumeBarFadeTimeoutId = React.useRef(null);
   const playbackStateRef = React.useRef({ hostPlaybackAllowed, userPaused });
-  const displayPaused = userPaused || !hostPlaybackAllowed;
+  const displayPaused = userPaused || !hostPlaybackAllowed || autoPaused;
 
   React.useEffect(() => {
     playbackStateRef.current = { hostPlaybackAllowed, userPaused };
@@ -37,23 +39,75 @@ const Player = ({
       onAudioPrepared();
       const playbackState = playbackStateRef.current;
       if (playbackState.hostPlaybackAllowed && !playbackState.userPaused) {
+        window.__xyDesktopPrepareManualResume?.();
         audio.play().catch(() => {});
       }
     };
+    // Retry the media load a couple of times when metadata is slow or the first
+    // attempt fails, so a single slow/aborted load cannot leave the theme silent.
+    let attempts = 0;
+    let retryTimer = null;
+    const report = (kind) => {
+      try {
+        window.chrome?.webview?.postMessage({
+          type: "xy-page-report",
+          kind,
+          attempts,
+          readyState: audio.readyState,
+          networkState: audio.networkState,
+          errorCode: audio.error?.code ?? null,
+          src: String(audio.src || song.audio).slice(0, 160),
+        });
+      } catch (_) {}
+    };
+    const tryLoad = () => {
+      attempts += 1;
+      audio.src = song.audio;
+      audio.load();
+      if (retryTimer !== null) clearTimeout(retryTimer);
+      if (attempts <= 2) {
+        retryTimer = setTimeout(() => {
+          if (audio.src === song.audio && !audio.error && audio.readyState < 1) {
+            console.error(`xy-audio-stalled retry=${attempts} src=${song.audio}`);
+            report("audio-stalled");
+            tryLoad();
+          }
+        }, 4000);
+      }
+    };
+    const onAudioError = () => {
+      console.error(
+        `xy-audio-error code=${audio.error?.code ?? "none"} src=${song.audio}`);
+      report("audio-error");
+      if (attempts <= 2) tryLoad();
+    };
     audio.pause();
     audio.crossOrigin = "anonymous";
-    audio.src = song.audio;
-    audio.load();
+    tryLoad();
     setProgress(0);
     setDuration(0);
     audio.addEventListener("loadedmetadata", prepared, { once: true });
-    return () => audio.removeEventListener("loadedmetadata", prepared);
-  }, [audioRef, onAudioPrepared, song.audio]);
+    audio.addEventListener("error", onAudioError);
+    return () => {
+      audio.removeEventListener("loadedmetadata", prepared);
+      audio.removeEventListener("error", onAudioError);
+      if (retryTimer !== null) clearTimeout(retryTimer);
+    };
+  }, [audioRef, onAudioPrepared, song.audio, themeEpoch]);
 
   React.useEffect(() => {
     const audio = audioRef.current;
-    if (userPaused || !hostPlaybackAllowed) audio.pause();
-    else if (audio.src) audio.play().catch(() => {});
+    if (userPaused || !hostPlaybackAllowed) {
+      // 手动暂停与切换窗口暂停统一:同样做 500ms 淡出后停止。
+      if (userPaused && audio.src && !audio.paused) {
+        window.__xyDesktopFadeStop?.();
+      } else {
+        audio.pause();
+      }
+    } else if (audio.src) {
+      window.__xyDesktopPrepareManualResume?.();
+      audio.play().catch(() => {});
+    }
   }, [audioRef, hostPlaybackAllowed, userPaused]);
 
   React.useEffect(() => {
@@ -74,8 +128,10 @@ const Player = ({
   }, [audioRef]);
 
   const onSongEnded = useEffectEvent(() => {
-    if (replay) audioRef.current.play().catch(() => {});
-    else changeSong(true);
+    if (replay) {
+      window.__xyDesktopPrepareManualResume?.();
+      audioRef.current.play().catch(() => {});
+    } else changeSong(true);
   });
 
   React.useEffect(() => {

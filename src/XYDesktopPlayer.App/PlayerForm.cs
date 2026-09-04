@@ -42,6 +42,7 @@ internal sealed class PlayerForm : Form
     private bool _interactionFailureReported;
     private bool _pendingManualPause;
     private string? _settingsWarning;
+    private System.Windows.Forms.Timer? _themeSwitchFallback;
 
     public PlayerForm(
         WebContentMapping mapping,
@@ -151,9 +152,11 @@ internal sealed class PlayerForm : Form
                 WallpaperEngineShim.Script);
             TraceCapture("document-script-added");
 
-            _webView.CoreWebView2.NavigationStarting += (_, _) =>
+            _webView.CoreWebView2.NavigationStarting += (_, eventArgs) =>
             {
                 TraceCapture("navigation-starting");
+                ApplicationLog.Write($"xy-diag nav-start uri={eventArgs.Uri} theme={_currentTheme.Id}");
+                StopThemeSwitchFallback();
                 _webViewReady = false;
                 _themePayloadSent = false;
                 _themeReady = false;
@@ -165,6 +168,20 @@ internal sealed class PlayerForm : Form
             };
             _webView.CoreWebView2.WebMessageReceived += OnWebMessageReceived;
             _webView.NavigationCompleted += OnNavigationCompleted;
+            try
+            {
+                // DIAG: capture page console and failed resource loads without changing behavior.
+                var logReceiver = _webView.CoreWebView2.GetDevToolsProtocolEventReceiver("Log.entryAdded");
+                logReceiver.DevToolsProtocolEventReceived += (_, eventArgs) =>
+                    ApplicationLog.Write($"xy-diag page-log {eventArgs.ParameterObjectAsJson}");
+                var consoleReceiver = _webView.CoreWebView2.GetDevToolsProtocolEventReceiver("Runtime.consoleAPICalled");
+                consoleReceiver.DevToolsProtocolEventReceived += (_, eventArgs) =>
+                    ApplicationLog.Write($"xy-diag page-console {eventArgs.ParameterObjectAsJson}");
+            }
+            catch (Exception diagException)
+            {
+                ApplicationLog.Write($"xy-diag console-hook-failed: {diagException.Message}");
+            }
             _webView.Source = _mapping.StartUri;
             TraceCapture("navigation-requested");
             _themeMonitor = new ThemeDirectoryMonitor(_paths.Themes);
@@ -188,6 +205,9 @@ internal sealed class PlayerForm : Form
     private void OnNavigationCompleted(object? sender, CoreWebView2NavigationCompletedEventArgs eventArgs)
     {
         TraceCapture($"navigation-completed: success={eventArgs.IsSuccess}; status={eventArgs.WebErrorStatus}");
+        ApplicationLog.Write(
+            $"xy-diag nav-complete success={eventArgs.IsSuccess} status={eventArgs.WebErrorStatus} " +
+            $"uri={_webView.Source} theme={_currentTheme.Id}");
         if (!eventArgs.IsSuccess)
         {
             _webViewReady = false;
@@ -230,8 +250,26 @@ internal sealed class PlayerForm : Form
                 return;
             }
 
+            if (type.ValueKind == JsonValueKind.String)
+            {
+                var messageType = type.GetString();
+                if (messageType == "xy-desktop-click")
+                {
+                    // 页面任意位置点击 = “回到桌面”信号(点击封面/空白都会走到这里)。
+                    _foregroundPlayback?.NotifyDesktopInteraction();
+                    return;
+                }
+
+                if (messageType?.StartsWith("xy-", StringComparison.Ordinal) == true)
+                {
+                    ApplicationLog.Write($"xy-diag page-report {eventArgs.WebMessageAsJson}");
+                    return;
+                }
+            }
+
             if (type.GetString() == "player-ready")
             {
+                ApplicationLog.Write($"xy-diag msg=player-ready source={eventArgs.Source} theme={_currentTheme.Id}");
                 if (_themePayloadSent)
                 {
                     return;
@@ -258,7 +296,13 @@ internal sealed class PlayerForm : Form
             _themeReady = true;
             var songCount = root.TryGetProperty("songCount", out var count) ? count.GetInt32() : 0;
             TraceCapture($"theme-ready: id={_currentTheme.Id}; songs={songCount}");
-            _foregroundPlayback ??= new ForegroundPlaybackController(_webView, logDirectory: _paths.Logs);
+            ApplicationLog.Write($"xy-diag msg=theme-ready id={_currentTheme.Id} songs={songCount}");
+            StopThemeSwitchFallback();
+            _foregroundPlayback ??= new ForegroundPlaybackController(
+                _webView,
+                logDirectory: _paths.Logs,
+                isWallpaperMode: () => _currentMode == HostMode.Wallpaper,
+                getPlayerWindowHandle: () => Handle);
             if (_pendingManualPause)
             {
                 await StartupPlaybackService.ApplyManualPausedAsync(_webView.CoreWebView2, paused: true);
@@ -295,21 +339,18 @@ internal sealed class PlayerForm : Form
 
     private Task SendCurrentThemeAsync()
     {
-        ApplyThemeHostMapping();
-        var payload = ThemeRuntimePayloadFactory.Create(_currentTheme);
-        _webView.CoreWebView2.PostWebMessageAsJson(
-            JsonSerializer.Serialize(payload, WebJsonOptions));
-        TraceCapture($"theme-sent: id={_currentTheme.Id}; songs={payload.Songs.Count}");
+        PostCurrentThemePayload();
         return Task.CompletedTask;
     }
 
-    private void ApplyThemeHostMapping()
+    private ThemeWebContentMapping ApplyThemeHostMapping()
     {
         var themeMapping = ThemeWebContentMapping.Create(_currentTheme);
         _webView.CoreWebView2.SetVirtualHostNameToFolderMapping(
             themeMapping.VirtualHostName,
             themeMapping.ResolvedAssetRoot,
             CoreWebView2HostResourceAccessKind.Allow);
+        return themeMapping;
     }
 
     private async Task<bool> StartInitialPlaybackAsync()
@@ -511,6 +552,7 @@ internal sealed class PlayerForm : Form
 
     protected override void OnFormClosing(FormClosingEventArgs eventArgs)
     {
+        StopThemeSwitchFallback();
         _themeMonitor?.Stop();
         _desktopInteraction?.Stop();
         _foregroundPlayback?.Stop();
@@ -621,20 +663,25 @@ internal sealed class PlayerForm : Form
 
     private async Task SwitchThemeAsync(string themeId)
     {
+        ApplicationLog.Write($"xy-diag switch-request id={themeId} current={_currentTheme.Id}");
         var target = _themeCatalog.Themes.FirstOrDefault(theme =>
             string.Equals(theme.Id, themeId, StringComparison.Ordinal));
         if (target is null || string.Equals(target.Id, _currentTheme.Id, StringComparison.Ordinal))
         {
+            ApplicationLog.Write($"xy-diag switch-skip targetNull={target is null}");
             return;
         }
 
-        if (_webView.CoreWebView2 is not null)
+        var pageReady = _webView.CoreWebView2 is not null && _webViewReady;
+        if (pageReady)
         {
-            _pendingManualPause = _webViewReady && _themeReady &&
-                                  await StartupPlaybackService.GetManualPausedAsync(_webView.CoreWebView2);
-            await StartupPlaybackService.ReleaseAsync(_webView.CoreWebView2);
+            _pendingManualPause = _themeReady &&
+                                  await StartupPlaybackService.GetManualPausedAsync(_webView.CoreWebView2!);
+            ApplicationLog.Write($"xy-diag switch-pendingManualPause={_pendingManualPause}");
+            await StartupPlaybackService.ReleaseAsync(_webView.CoreWebView2!);
         }
         _currentTheme = target;
+        ApplicationLog.Write($"xy-diag switch-current={_currentTheme.Id}");
         var save = PlayerSettingsStore.Save(
             _paths.Settings,
             new PlayerSettings(_currentTheme.Id));
@@ -648,7 +695,70 @@ internal sealed class PlayerForm : Form
         }
 
         RebuildThemeMenu();
-        _webView.CoreWebView2?.Reload();
+        if (!pageReady)
+        {
+            // The page is still loading or failed: a plain reload applies the new theme
+            // through the normal player-ready handshake.
+            ApplicationLog.Write("xy-diag switch-reloading page-not-ready");
+            _webView.CoreWebView2?.Reload();
+            return;
+        }
+
+        // In-place swap on the live page: the player page is designed to receive a new
+        // theme payload at any time (receiveTheme), so no navigation is needed. Navigating
+        // here was the source of first-load media stalls after theme switches.
+        _themeReady = false;
+        _startupPlaybackStarted = false;
+        _startupPlaybackError = null;
+        _themePayloadSent = true;
+        _foregroundPlayback?.Stop();
+        ApplicationLog.Write("xy-diag switch-inplace-posting");
+        PostCurrentThemePayload();
+        ArmThemeSwitchFallback();
+    }
+
+    private void StopThemeSwitchFallback()
+    {
+        _themeSwitchFallback?.Stop();
+        _themeSwitchFallback?.Dispose();
+        _themeSwitchFallback = null;
+    }
+
+    private void ArmThemeSwitchFallback()
+    {
+        StopThemeSwitchFallback();
+        var fallback = new System.Windows.Forms.Timer { Interval = 3500 };
+        fallback.Tick += (_, _) =>
+        {
+            StopThemeSwitchFallback();
+            if (IsDisposed || _themeReady || _webView.CoreWebView2 is null)
+            {
+                return;
+            }
+
+            // DIAG + recovery: the first in-place theme swap after startup can stall
+            // media readiness; a single plain reload is the known-good recovery.
+            ApplicationLog.Write("xy-diag switch-fallback-reloading");
+            _webView.CoreWebView2.Reload();
+        };
+        _themeSwitchFallback = fallback;
+        fallback.Start();
+    }
+
+    private void PostCurrentThemePayload()
+    {
+        var themeMapping = ApplyThemeHostMapping();
+        var payload = ThemeRuntimePayloadFactory.Create(
+            _currentTheme,
+            themeMapping.VirtualHostName);
+        var first = payload.Songs.Count > 0 ? payload.Songs[0] : null;
+        ApplicationLog.Write(
+            $"xy-diag theme-sent id={_currentTheme.Id} host={themeMapping.VirtualHostName} " +
+            $"songs={payload.Songs.Count} audio0={first?.Audio} cover0={first?.Cover} " +
+            $"lrc0chars={first?.Lyrics.Original?.Length ?? 0}");
+        _webView.CoreWebView2.PostWebMessageAsJson(
+            JsonSerializer.Serialize(payload, WebJsonOptions));
+        TraceCapture($"theme-sent: id={_currentTheme.Id}; songs={payload.Songs.Count}");
     }
 
     private async Task ReloadCurrentThemeAsync()
@@ -899,10 +1009,15 @@ internal sealed class PlayerForm : Form
             return;
         }
 
-        _desktopInteraction ??= new DesktopInteractionController(
-            Handle,
-            _webView,
-            _desktopHost);
+        if (_desktopInteraction is null)
+        {
+            _desktopInteraction = new DesktopInteractionController(
+                Handle,
+                _webView,
+                _desktopHost);
+            _desktopInteraction.BlankAreaLeftClicked += OnBlankDesktopClicked;
+        }
+
         if (_desktopInteraction.Start())
         {
             _interactionFailureReported = false;
@@ -924,13 +1039,24 @@ internal sealed class PlayerForm : Form
             ToolTipIcon.Warning);
     }
 
+    private void OnBlankDesktopClicked()
+    {
+        try
+        {
+            _foregroundPlayback?.NotifyDesktopInteraction();
+        }
+        catch (Exception exception)
+        {
+            ApplicationLog.Write($"xy-diag desktop-click-error: {exception.Message}");
+        }
+    }
+
     private void UpdateDesktopInteractionMenu()
     {
         if (_desktopInteractionItem is null)
         {
             return;
         }
-
         var running = _desktopInteraction?.IsRunning == true;
         _desktopInteractionItem.Checked = running;
         _desktopInteractionItem.Text = _desktopInteractionEnabled

@@ -1,5 +1,8 @@
 namespace XYDesktopPlayer.Core;
 
+using System.Security.Cryptography;
+using System.Text;
+
 public sealed record ThemeWebContentMapping(
     string ResolvedAssetRoot,
     string VirtualHostName)
@@ -15,6 +18,21 @@ public sealed record ThemeWebContentMapping(
 
         return new ThemeWebContentMapping(
             resolvedAssetRoot,
-            "theme.xydesktop.local");
+            $"{CreateHostLabel(theme.Id)}.xydesktop.local");
+    }
+
+    private static string CreateHostLabel(string themeId)
+    {
+        if (themeId.Length <= 57 &&
+            themeId[^1] != '-' &&
+            themeId.All(character =>
+                character is >= 'a' and <= 'z' or >= '0' and <= '9' or '-'))
+        {
+            return $"theme-{themeId}";
+        }
+
+        var hash = Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(themeId)))
+            .ToLowerInvariant();
+        return $"theme-{hash[..20]}";
     }
 }

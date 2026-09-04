@@ -85,7 +85,9 @@ public static class DesktopPointerRoutePolicy
             return DesktopPointerAction.DismissMenuForwardAndConsume;
         }
 
-        return context.EventKind == DesktopPointerEventKind.Move
+        // 鼠标移动与“松开左键”都只转发、不吞掉:Explorer 拖拽图标时会经过桌面空白区,
+        // 若把 LeftUp 也吞掉,图标拖拽无法完成释放。
+        return context.EventKind is DesktopPointerEventKind.Move or DesktopPointerEventKind.LeftUp
             ? DesktopPointerAction.Forward
             : DesktopPointerAction.ForwardAndConsume;
     }

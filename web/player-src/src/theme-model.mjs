@@ -1,4 +1,6 @@
-const THEME_HOST = "theme.xydesktop.local";
+const THEME_HOST_PATTERN =
+  /^theme-[a-z0-9](?:[a-z0-9-]{0,55}[a-z0-9])?\.xydesktop\.local$/;
+const THEME_HOST_EXAMPLE = "theme-<id>.xydesktop.local";
 const HEX_COLOR = /^#[0-9a-fA-F]{6}([0-9a-fA-F]{2})?$/;
 
 export const DEFAULT_ICONS = Object.freeze({
@@ -105,16 +107,16 @@ function requireThemeUrl(value, label) {
   try {
     url = new URL(text);
   } catch {
-    throw new Error(`${label} must use https://${THEME_HOST}/.`);
+    throw new Error(`${label} must use https://${THEME_HOST_EXAMPLE}/.`);
   }
   if (
     url.protocol !== "https:" ||
-    url.hostname !== THEME_HOST ||
+    !THEME_HOST_PATTERN.test(url.hostname) ||
     url.username ||
     url.password ||
     url.port
   ) {
-    throw new Error(`${label} must use https://${THEME_HOST}/.`);
+    throw new Error(`${label} must use https://${THEME_HOST_EXAMPLE}/.`);
   }
   return url.href;
 }

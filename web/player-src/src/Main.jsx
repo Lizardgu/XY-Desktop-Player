@@ -28,7 +28,9 @@ const Main = () => {
   const [replay, setReplay] = React.useState(false);
   const [userPaused, setUserPaused] = React.useState(false);
   const [hostPlaybackAllowed, setHostPlaybackAllowed] = React.useState(false);
+  const [autoPaused, setAutoPaused] = React.useState(false);
   const [audioPrepared, setAudioPrepared] = React.useState(false);
+  const [themeEpoch, setThemeEpoch] = React.useState(0);
   const [uiVolume] = React.useState(0.5);
   const [textSize] = React.useState(1);
   const audioRef = React.useRef(new Audio());
@@ -40,16 +42,25 @@ const Main = () => {
       audioRef.current.removeAttribute("src");
       audioRef.current.load();
       setTheme(normalized);
+      setThemeEpoch((value) => value + 1);
       setSongIndex(0);
       setPlaylistMode(0);
       setSongLists(loadSongLists(normalized.id, normalized.songs.length));
       setUserPaused(false);
+      setAutoPaused(false);
       setHostPlaybackAllowed(false);
       setAudioPrepared(false);
       setThemeError(null);
     } catch (error) {
       setTheme(null);
       setThemeError(error instanceof Error ? error.message : String(error));
+      try {
+        window.chrome?.webview?.postMessage({
+          type: "xy-page-report",
+          kind: "theme-rejected",
+          error: error instanceof Error ? error.message : String(error),
+        });
+      } catch (_) {}
     }
   }, []);
 
@@ -66,15 +77,58 @@ const Main = () => {
   }, [receiveTheme]);
 
   React.useEffect(() => {
+    // 点击桌面(封面或空白)即通知宿主“回到桌面”,用于恢复自动暂停的播放。
+    const onPointerDown = () => {
+      try {
+        window.chrome?.webview?.postMessage({ type: "xy-desktop-click" });
+      } catch (_) {}
+    };
+    const onDragStart = (event) => {
+      const target = event.target;
+      if (target && (target.tagName === "IMG" || target.tagName === "CANVAS")) {
+        event.preventDefault();
+      }
+    };
+    const onDoubleClick = (event) => {
+      const target = event.target;
+      if (
+        target &&
+        !target.closest?.(
+          "button, input, a, [role='button'], .iconButton, .audioControls, .playlist")
+      ) {
+        event.preventDefault();
+      }
+    };
+    window.addEventListener("pointerdown", onPointerDown, { capture: true });
+    document.addEventListener("dragstart", onDragStart, true);
+    document.addEventListener("dblclick", onDoubleClick, true);
+    return () => {
+      window.removeEventListener("pointerdown", onPointerDown, { capture: true });
+      document.removeEventListener("dragstart", onDragStart, true);
+      document.removeEventListener("dblclick", onDoubleClick, true);
+    };
+  }, []);
+
+  React.useEffect(() => {
     window.__xyDesktopGetPlayerState = () => ({
       themeId: theme?.id ?? null,
       manualPaused: userPaused,
+      autoPaused,
       audioPrepared,
     });
+    window.__xyDesktopSetAutoPaused = (value) => {
+      setAutoPaused(value === true);
+      return value === true;
+    };
     window.__xyDesktopApplyManualPaused = (paused) => {
       const nextPaused = paused === true;
       setUserPaused(nextPaused);
-      if (nextPaused) audioRef.current.pause();
+      if (nextPaused) {
+        window.__xyDesktopFadeStop?.();
+      } else {
+        window.__xyDesktopPrepareManualResume?.();
+        audioRef.current.play().catch(() => {});
+      }
       return nextPaused;
     };
     window.__xyDesktopStartPlayback = async () => {
@@ -84,7 +138,9 @@ const Main = () => {
       try {
         setHostPlaybackAllowed(true);
         setUserPaused(false);
+        setAutoPaused(false);
         window.__xyDesktopResumeAudioContext?.();
+        window.__xyDesktopPrepareManualResume?.();
         await audioRef.current.play();
         return { started: true, source: audioRef.current.currentSrc || audioRef.current.src, error: null };
       } catch (error) {
@@ -101,14 +157,16 @@ const Main = () => {
       audioRef.current.load();
       setHostPlaybackAllowed(false);
       setAudioPrepared(false);
+      setAutoPaused(false);
     };
     return () => {
       delete window.__xyDesktopGetPlayerState;
+      delete window.__xyDesktopSetAutoPaused;
       delete window.__xyDesktopApplyManualPaused;
       delete window.__xyDesktopStartPlayback;
       delete window.__xyDesktopReleasePlayer;
     };
-  }, [theme, userPaused, audioPrepared]);
+  }, [theme, userPaused, autoPaused, audioPrepared]);
 
   React.useEffect(() => {
     if (!theme || !audioPrepared) return;
@@ -122,6 +180,18 @@ const Main = () => {
   React.useEffect(() => {
     if (theme) saveSongLists(theme.id, songLists);
   }, [theme, songLists]);
+
+  const requestPauseChange = React.useCallback((paused) => {
+    if (!paused && autoPaused) {
+      // 自动暂停(切换窗口)期间点播放 = 立即手动恢复。
+      setAutoPaused(false);
+      setUserPaused(false);
+      window.__xyDesktopPrepareManualResume?.();
+      audioRef.current.play().catch(() => {});
+      return;
+    }
+    setUserPaused(paused);
+  }, [autoPaused]);
 
   const currentSong = theme?.songs[songIndex] ?? null;
   const handleAudioPrepared = React.useCallback(() => setAudioPrepared(true), []);
@@ -250,8 +320,9 @@ const Main = () => {
           song={currentSong}
           audioRef={audioRef}
           userPaused={userPaused}
+          autoPaused={autoPaused}
           hostPlaybackAllowed={hostPlaybackAllowed}
-          onManualPause={setUserPaused}
+          onManualPause={requestPauseChange}
           onAudioPrepared={handleAudioPrepared}
           changeSong={changeSong}
           shuffle={shuffle}
@@ -260,6 +331,7 @@ const Main = () => {
           textSize={textSize}
           icon={icon}
           playEffect={playEffect}
+          themeEpoch={themeEpoch}
         />
       ) : null}
       {lyricsVisible ? (

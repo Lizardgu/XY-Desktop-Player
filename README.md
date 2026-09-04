@@ -1,133 +1,59 @@
 # XY桌面播放器
 
-一个面向 Windows 10 的本地动态桌面播放器宿主。目标是让普通网页播放器脱离 Wallpaper Engine 独立运行，并支持两种模式：
+让"网页音乐播放器"成为 **Windows 本地动态桌面**,脱离 Wallpaper Engine / Steam 独立运行。它把播放器页面嵌入桌面图标后方作为壁纸使用,也可以作为普通窗口打开;一个播放器可挂载多个主题,每首歌独立拥有封面 / 歌名 / 歌手 / 歌词 / 配色。
 
-- `window`：普通独立窗口，用于调试和内容验收。
-- `wallpaper`：嵌入桌面图标后方，由系统托盘控制。
+## ✨ 特点
 
-当前开发分支已经提炼为“共用播放器 + 主题文件夹”：内置不可删除的“孤独摇滚”，外部主题由用户手动解压到主题安装目录后扫描加载。每个主题可为每首歌分别提供音频、封面、歌名、歌手、歌词和固定背景色。格式见 [`docs/THEME-PACK-GUIDE.md`](docs/THEME-PACK-GUIDE.md)。
+- **智能自动暂停**:打开或最大化任何普通程序窗口 → 音乐先 500ms 平滑淡出,再自动暂停;回到桌面(Windows+D,或点击桌面/封面)即自动恢复。手动暂停的音乐绝不被打断;快速闪窗也不会"断声"。
+- **自选与排序歌曲**:歌单自由挑歌、调整顺序,第一首即默认曲。
+- **一播放器、多主题**:主题 = 一个文件夹(`%LOCALAPPDATA%\XYDesktopPlayer\Themes` 下的一级子目录);放进即用、删除即卸载、新建后托盘"重新扫描主题"。内置"孤独摇滚"作为不可删除的回退主题。
+- **零门槛加歌**(主题内自带脚本):QQ 官方歌词自动抓取、网页(lrclib)歌词下载并自动修复乱码、Spotify 封面一键下载(带进度条)、封面自动配色、纯音乐一键标记、歌曲排序。
+- **桌面交互安心**:图标区仍归 Explorer(可正常点选/拖拽桌面图标),空白区可点播播放器;右键永远打开 Windows 桌面菜单;退出后原壁纸即刻恢复,不注入、不改系统文件、不留残留。
+- **两种模式一键切换**:桌面壁纸 / 普通窗口,托盘完整控制(重载、切主题、切交互、导出诊断)。
+- **技术**:自包含 .NET 8 + WebView2(目标机仅需 WebView2 Runtime);每主题独立虚拟主机与媒体资源隔离。
 
-Steam Workshop 原目录不会被修改。当前版本状态与后续换主题方法见 `docs/PROJECT-STATUS.md`。
+> 核心自动化测试覆盖自动暂停策略、桌面交互、主题加载、淡出与恢复壁纸等 60+ 用例。
 
-## Git 与大文件
+## 截图
 
-源代码、主题定义、测试、工具和文档进入 Git。导入后的音乐、封面、歌词、WebView2 数据、Node 依赖和编译产物均被忽略。含媒体的完整包只适合在确认素材授权后作为 Release 附件分发。
+(占位:壁纸模式全屏 / 普通窗口 / 主题歌单)
 
-## 构建环境
+## 快速开始
 
-- Windows 10/11 x64
-- .NET 8 SDK
-- Microsoft Edge WebView2 Runtime
+**安装本体**:到 [Releases](#releases) 下载 `XY桌面播放器-vX.Y.Z-win-x64.zip`,解压后双击 **`双击这里-启动桌面壁纸.cmd`** 即可进入壁纸模式;`普通窗口（备用）.cmd` 用于排查。
 
-仓库内的 `tools/Invoke-DotNet.ps1` 会优先使用 `XY_DOTNET` 指定的 SDK，也能识别本次工作区内的项目级 SDK。
+**安装主题**:到 Releases 下载任意主题包 zip(如 `绝区零主题包-v1.0.0.zip`),解压后**双击包内「安装到本机主题目录.cmd」**;之后在托盘 → 主题 → 「重新扫描主题」看到它,点名称即切换。
 
-## 导入参考播放器
+托盘菜单包含:切换-窗口模式 / 切换-桌面模式 / 桌面交互开关 / 主题(选择、打开安装目录、重新扫描)/ 重新加载播放器 / 退出。
 
-在 PowerShell 中进入仓库目录后运行：
+## 主题
 
-```powershell
-& '.\tools\Import-ReferencePlayer.ps1' -Source 'E:\SteamLibrary\steamapps\workshop\content\431960\2905017768'
-```
+- 主题格式见 [`docs/THEME-PACK-GUIDE.md`](docs/THEME-PACK-GUIDE.md)。
+- 主题只能提供数据与媒体(JSON + 音频/图片/歌词),**不会执行任何脚本或可执行文件**;外部主题不能覆盖内置 `bocchi`。
+- 想自己做一个空主题:以 [`themes/template`](themes/template) 为起点。
+- 主题包内含的加歌助手 / 歌词下载工具 / 歌曲排序脚本随主题 zip 一起发布。
 
-脚本只读取来源，把完整副本写到 `content/reference-player`，并在 `manifests/reference-player.manifest.json` 记录每个文件的大小和 SHA-256。目标已存在时脚本会停止，不会静默覆盖。
+## Releases
 
-导入器自身可用一个微型临时内容包测试：
+| 附件 | 内容 | 谁需要 |
+|---|---|---|
+| `XY桌面播放器-vX.Y.Z-win-x64.zip` | **本体**,自包含程序 + 内置孤独摇滚回退主题 | 所有人(必装) |
+| `<主题名>主题包-vX.Y.Z.zip` | 一个主题的完整文件夹 + 一键安装脚本 | 想用该主题的人 |
 
-```powershell
-& '.\tests\ImportReferencePlayer.Tests.ps1'
-```
+发布流程与命名约定见 [`docs/RELEASE.md`](docs/RELEASE.md)。
 
-## 构建和运行 A
+## 构建(开发者)
 
-首次还原 WebView2 开发包：
+- Windows 10/11 x64、.NET 8 SDK、WebView2 Runtime。
+- 网页播放器源码在 `web/player-src`;构建产物在 `web/player`。
+- 桌面模式自检/验收脚本与说明见仓库 `tools/` 与 `docs/`。
 
-```powershell
-& '.\tools\Invoke-DotNet.ps1' restore '.\XYDesktopPlayer.sln' --configfile '.\NuGet.Config'
-```
+## 致谢与授权
 
-构建与非图形自检：
+- 网页播放器界面/交互参考并改自 [OriginalCube/Bocchi-Wallpaper](https://github.com/OriginalCube/Bocchi-Wallpaper)(MIT,Copyright (c) 2025 Lance Miraflor),许可证文本见 [`web/player-src/UPSTREAM-LICENSE.txt`](web/player-src/UPSTREAM-LICENSE.txt);壁纸灵感来自其 Steam 创意工坊作品《Bocchi the Rock! (Album)》。
+- 详细的三方说明与媒体素材边界见 [`ATTRIBUTION.md`](ATTRIBUTION.md)。
+- 仓库源码不含受版权媒体(音乐/封面/歌词);含媒体的主题 zip 与内置媒体仅供**个人自用**,请勿二次分发或商用,使用前请自行确认授权。
 
-```powershell
-& '.\tools\Invoke-DotNet.ps1' build '.\XYDesktopPlayer.sln' --no-restore
-& '.\tools\Run-SelfTest.ps1'
-```
+## 状态
 
-打开普通独立窗口：
-
-```powershell
-& '.\tools\Run-Window.ps1'
-```
-
-自动加载页面、启动一首歌、保存 PNG/DOM 报告并退出：
-
-```powershell
-& '.\tools\Run-CaptureTest.ps1'
-```
-
-验收输出位于 `artifacts/smoke/reference-player.png` 和同名 JSON；该目录是可重复生成的，因此不进入 Git。
-
-## 运行 B：桌面图标后方
-
-```powershell
-& '.\tools\Run-Wallpaper.ps1'
-```
-
-启动后播放器窗口不显示在任务栏，而是进入 Windows Explorer 的 `WorkerW` 桌面层。右下角托盘中的“XY桌面播放器”菜单提供：
-
-- 切换-窗口模式
-- 切换-桌面模式
-- 开启或关闭桌面交互
-- 切换主题、打开主题安装目录、重新扫描主题
-- 重新加载播放器
-- 退出 XY桌面播放器
-
-“切换-窗口模式”和“切换-桌面模式”左侧的勾表示当前实际模式，两项始终只有一项被勾选；桌面嵌入失败并回退窗口模式时，勾也会跟着实际模式变化。
-
-“重新加载播放器”相当于重新读取当前主题，适合页面卡住或覆盖主题素材后使用；它会从主题第一首歌重新开始，但保留当前进程内的手动暂停状态。
-
-新主题下载为 ZIP 后，需要先由用户解压成文件夹，再放入托盘菜单打开的主题安装目录。程序不直接读取 ZIP，也不会执行主题中的脚本。新建或删除主题文件夹后点“重新扫描主题”；普通覆盖不会打断当前播放。
-
-页面加载完成后会自动播放当前默认歌曲，不需要先点播放键。如果启动时已有其他普通程序处于前台，播放器会先保持静音，等用户回到桌面后再开始播放，避免先响一下再暂停。若系统临时拒绝自动播放，程序保持可操作，仍可手动点击播放。
-
-播放器按固定间隔检查桌面上方的普通程序窗口。检测到阻挡窗口后，音乐会先在约 500 毫秒内平滑淡出到静音，再自动暂停；回到桌面后恢复本次被自动暂停的歌曲。原本由用户手动暂停的歌曲不会被自动播放。该检测在恢复分支中已有新的顶层窗口枚举实现，但仍需完成真实桌面验收，不能仅依据自动测试认定所有窗口类型都已覆盖。
-
-桌面交互默认开启。桌面文件和快捷方式像遮罩一样保留在播放器上方：
-
-- 左键、双击、鼠标移动和滚轮只有在桌面图标未覆盖的区域才会转给播放器。
-- 点到桌面图标时仍由 Explorer 正常处理，不会同时触发下面的播放器。
-- 右键始终属于 Windows，继续打开系统桌面菜单，不会打开网页右键菜单。
-- 桌面菜单打开后，左键点播放器空白区域会先收起菜单，并继续把这次点击交给播放器。
-- 关闭“显示桌面图标”后，图标遮罩为空，整个空白桌面都可以操作播放器。
-- 前台程序、任务栏、开始菜单、托盘和弹出菜单不会被转发。
-
-如果需要暂时完整操作桌面图标，可在托盘取消“桌面交互”，或者切换到普通窗口。图标范围无法可靠读取时，程序会优先把鼠标保留给 Windows，不会锁死桌面。
-
-双击托盘图标也会切回普通窗口。Explorer 重启后，程序会监听任务栏重建消息并尝试重新嵌入；失败时自动回退为普通窗口。
-
-从托盘退出时，程序会先从 WorkerW 桌面层解除播放器；如果本次承载播放器的 Explorer WorkerW 已经没有任何子窗口，程序会把这个空层隐藏，再要求 Explorer 重绘桌面。这样原桌面会重新显露，同时不会改动或清空 Windows 原有壁纸设置，也不会影响桌面图标所在的 WorkerW 或其他程序的窗口。
-
-如果 Wallpaper Engine 正在运行，两者可能同时占用桌面层。长期使用 B 前，建议由用户自己暂停或退出 Wallpaper Engine；本程序不会擅自关闭它。
-
-可重复执行短时 B 验收（数秒后自动退出）：
-
-```powershell
-& '.\tools\Run-CaptureTest.ps1' -Mode wallpaper -Output '.\artifacts\smoke\wallpaper-player.png'
-```
-
-同名 `.host.json` 中的 `desktopAttached: true` 与 `parentClassName: WorkerW` 是桌面嵌入成功的机器可读证据。
-
-## 发布独立程序
-
-```powershell
-& '.\tools\Publish.ps1'
-```
-
-默认输出到 `artifacts/publish/XY桌面播放器-theme-skeleton-win-x64`。这是包含共用播放器和内置“孤独摇滚”主题的 win-x64 自包含程序，目标电脑不需要另装 .NET SDK；仍需要系统的 WebView2 Runtime。
-
-成品根目录只保留两个启动器、一个说明文件、`app` 和 `content`。普通用户双击 `双击这里-启动桌面壁纸.cmd`；`普通窗口（备用）.cmd` 仅用于故障排查。`app` 中的 DLL 和运行库不是启动入口。
-
-发布布局为 `app`、`content/player` 和 `content/themes/孤独摇滚`。旧 Wallpaper Engine 的 `preview.gif`、`project.json`、旧网页构建和无用点击音不会进入成品。
-
-完整包包含原播放器的照片、音乐和歌词。对外上传或转发前，需要先确认已取得相应内容的再发布权利；源码骨架与主题模板不附带这些媒体。
-
-远程仓库为 [Lizardgu/XY-Desktop-Player](https://github.com/Lizardgu/XY-Desktop-Player)。当前主题骨架位于本地 `feature/theme-pack-skeleton-recovery` 分支；用户手动验收前不合并、不打新正式标签、不推送该分支。
+代码与主题骨架已整理完毕;正式标签与 Release 在人工验收后创建。

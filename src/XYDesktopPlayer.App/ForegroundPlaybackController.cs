@@ -16,22 +16,30 @@ internal sealed class ForegroundPlaybackController : IDisposable
     private bool _checking;
     private bool _wasBlocked;
     private bool _autoPauseArmed;
+    private bool _deniedLogged;
+    private bool _desktopClickPending;
     private bool _startupPending;
     private Func<Task<bool>>? _startPendingPlayback;
     private bool _disposed;
     private WindowPresenceResult? _lastResult;
 
     private readonly List<nint> _winEventHooks = new();
+    private readonly Func<bool>? _isWallpaperMode;
+    private readonly Func<nint>? _getPlayerWindowHandle;
     private WinEventDelegate? _winEventDelegate;
 
     public ForegroundPlaybackController(
         WebView2 webView,
         WindowPresenceDetector? presence = null,
-        string? logDirectory = null)
+        string? logDirectory = null,
+        Func<bool>? isWallpaperMode = null,
+        Func<nint>? getPlayerWindowHandle = null)
     {
         _webView = webView ?? throw new ArgumentNullException(nameof(webView));
         _presence = presence ?? new WindowPresenceDetector();
         _logDirectory = logDirectory;
+        _isWallpaperMode = isWallpaperMode;
+        _getPlayerWindowHandle = getPlayerWindowHandle;
         _diagnostics = logDirectory is null ? null : new PlaybackDiagnosticLog();
         _timer = new System.Windows.Forms.Timer
         {
@@ -47,6 +55,29 @@ internal sealed class ForegroundPlaybackController : IDisposable
     public bool AutoPauseArmed => _autoPauseArmed;
 
     public bool StartupPending => _startupPending;
+
+    /// <summary>
+    /// 用户在空白桌面点了左键(已被转发给播放器):这是明确的“回到桌面”信号,
+    /// 立即尝试恢复被自动暂停的音乐(手动暂停不受影响)。
+    /// </summary>
+    public void NotifyDesktopInteraction()
+    {
+        ObjectDisposedException.ThrowIf(_disposed, this);
+        _desktopClickPending = true;
+        if (!_timer.Enabled)
+        {
+            return;
+        }
+
+        if (_webView.IsHandleCreated && _webView.InvokeRequired)
+        {
+            _webView.BeginInvoke(() => _ = EvaluateState("desktopclick"));
+        }
+        else
+        {
+            _ = EvaluateState("desktopclick");
+        }
+    }
 
     public int PauseCount { get; private set; }
 
@@ -83,6 +114,7 @@ internal sealed class ForegroundPlaybackController : IDisposable
         LastError = null;
         InstallWindowHooks();
         _timer.Start();
+        ApplicationLog.Write($"xy-diag fgp-start startupPending={startupPending}");
     }
 
     /// <summary>
@@ -101,6 +133,8 @@ internal sealed class ForegroundPlaybackController : IDisposable
             InstallWindowHooks();
             _timer.Start();
         }
+
+        ApplicationLog.Write("xy-diag fgp-begin-pending-start");
     }
 
     public void Stop()
@@ -115,6 +149,8 @@ internal sealed class ForegroundPlaybackController : IDisposable
         {
             _ = ClearStoredAudioAsync();
         }
+
+        ApplicationLog.Write("xy-diag fgp-stop");
     }
 
     public void Dispose()
@@ -162,6 +198,7 @@ internal sealed class ForegroundPlaybackController : IDisposable
         catch (Exception exception)
         {
             LastError = exception.Message;
+            ApplicationLog.Write($"xy-diag fgp-timer-error: {exception}");
         }
         finally
         {
@@ -171,75 +208,158 @@ internal sealed class ForegroundPlaybackController : IDisposable
 
     private async Task EvaluateState(string trigger)
     {
-        if (_disposed)
+        try
         {
-            return;
-        }
+            if (_disposed)
+            {
+                return;
+            }
 
-        var result = _presence.Detect();
-        _lastResult = result;
-        var windowContext = result.Context;
-        var isBlocked = ForegroundWindowPolicy.ShouldBlockPlayback(windowContext);
-        var canStartOrResume = ForegroundWindowPolicy.CanStartOrResumePlayback(windowContext);
-        var action = ForegroundPlaybackPolicy.Decide(
-            new ForegroundPlaybackState(
-                _wasBlocked,
-                isBlocked,
-                _autoPauseArmed,
-                canStartOrResume,
-                _startupPending));
+            var result = _presence.Detect();
+            _lastResult = result;
+            var windowContext = result.Context;
+            var isBlocked = ForegroundWindowPolicy.ShouldBlockPlayback(windowContext);
+            var canStartOrResume = ForegroundWindowPolicy.CanStartOrResumePlayback(windowContext);
+            var wallpaperMode = _isWallpaperMode?.Invoke() ?? false;
+            var foreground = result.Foreground;
+            // 恢复只认两条路(按用户要求):
+            //   1. Windows+D 等把焦点交给桌面本体(Progman/WorkerW);
+            //   2. 鼠标在空白桌面点了左键(desktopclick,桌面交互转发时置位)。
+            // 其余情况一律保持暂停。
+            var desktopClick = _desktopClickPending;
+            _desktopClickPending = false;
+            var foregroundAllowsWallpaperResume =
+                wallpaperMode && (foreground.IsDesktopSurface || desktopClick);
+            var action = ForegroundPlaybackPolicy.Decide(
+                new ForegroundPlaybackState(
+                    _wasBlocked,
+                    isBlocked,
+                    _autoPauseArmed,
+                    canStartOrResume,
+                    _startupPending,
+                    WallpaperMode: wallpaperMode,
+                    ForegroundAllowsWallpaperResume: foregroundAllowsWallpaperResume));
 
-        switch (action)
-        {
-            case ForegroundPlaybackAction.Pause:
-                await EvaluateAsync("window.__xyDesktopPauseForFullscreen?.() ?? 0");
-                _autoPauseArmed = true;
-                _wasBlocked = true;
-                PauseCount++;
-                break;
+            var foregroundDetail =
+                $"fgClass={foreground.ClassName} fgOwn={foreground.IsOwnProcess} " +
+                $"fgDesk={foreground.IsDesktopSurface} fgShell={foreground.IsShellOverlay} " +
+                $"fgEmpty={foreground.Handle == nint.Zero} click={desktopClick}";
 
-            case ForegroundPlaybackAction.Resume:
-                await EvaluateAsync("window.__xyDesktopResumeAfterFullscreen?.() ?? 0");
-                _autoPauseArmed = false;
-                _wasBlocked = false;
-                ResumeCount++;
-                break;
+            // 点击桌面时按用户意图恢复一次:不要求窗口已关闭(焦点可能仍在别的程序上)。
+            // 手动暂停由恢复脚本内的 manualPaused 检查兜底,不会被误恢复。
+            if (desktopClick &&
+                wallpaperMode &&
+                _autoPauseArmed &&
+                action == ForegroundPlaybackAction.None)
+            {
+                action = ForegroundPlaybackAction.Resume;
+                ApplicationLog.Write($"xy-diag fgp=resume force-desktopclick {foregroundDetail}");
+            }
 
-            case ForegroundPlaybackAction.Start:
-                var startPendingPlayback = _startPendingPlayback;
-                if (startPendingPlayback is null)
-                {
-                    _startupPending = false;
-                    _autoPauseArmed = false;
-                    _wasBlocked = false;
+            switch (action)
+            {
+                case ForegroundPlaybackAction.Pause:
+                    _deniedLogged = false;
+                    ApplicationLog.Write(
+                        $"xy-diag fgp=pause trigger={trigger} blockedWindows={result.BlockingWindows.Count} {foregroundDetail}");
+                    // Mark the pause request immediately and run the fade asynchronously so a
+                    // quick return to the desktop can cancel it before the audio is paused.
+                    _autoPauseArmed = true;
+                    _wasBlocked = true;
+                    PauseCount++;
+                    await RunImmediateAsync(
+                        "window.__xyDesktopSetAutoPauseRequested?.(true); " +
+                        "window.__xyDesktopSetAutoPaused?.(true);");
+                    _ = EvaluateAsync("window.__xyDesktopPauseForFullscreen?.() ?? 0")
+                        .ContinueWith(task =>
+                        {
+                            if (task.IsFaulted && !_disposed)
+                            {
+                                LastError = task.Exception?.GetBaseException().Message;
+                                ApplicationLog.Write(
+                                    $"xy-diag fgp-pause-evaluate-error: {task.Exception?.GetBaseException()}");
+                            }
+                        }, TaskScheduler.Default);
                     break;
-                }
 
-                // Stay armed until the start actually succeeds. If it returns false (e.g. a
-                // window opened during the wait), keep _startupPending so the next tick retries.
-                _startupPending = true;
-                _autoPauseArmed = false;
-                _wasBlocked = false;
-                var started = await startPendingPlayback();
-                if (started)
-                {
-                    _startupPending = false;
+                case ForegroundPlaybackAction.Resume:
+                    _deniedLogged = false;
+                    ApplicationLog.Write(
+                        $"xy-diag fgp=resume trigger={trigger} {foregroundDetail}");
+                    // Immediate channel (not the CDP queue): this can cancel a fade that is
+                    // still in flight and restart audio without waiting for it to finish.
+                    // A manual pause (player button) must never be auto-resumed.
+                    await RunImmediateAsync(
+                        "window.__xyDesktopSetAutoPauseRequested?.(false); " +
+                        "if (window.__xyDesktopGetPlayerState?.().manualPaused) { " +
+                        "window.__xyDesktopClearFullscreenPause?.(); } else { " +
+                        "window.__xyDesktopResumeAfterFullscreen?.(); } " +
+                        "window.__xyDesktopSetAutoPaused?.(false);");
                     _autoPauseArmed = false;
                     _wasBlocked = false;
-                }
-                break;
+                    ResumeCount++;
+                    break;
 
-            default:
-                if (isBlocked || canStartOrResume)
-                {
-                    _wasBlocked = isBlocked;
-                }
+                case ForegroundPlaybackAction.Start:
+                    _deniedLogged = false;
+                    ApplicationLog.Write(
+                        $"xy-diag fgp=start trigger={trigger} {foregroundDetail}");
+                    var startPendingPlayback = _startPendingPlayback;
+                    if (startPendingPlayback is null)
+                    {
+                        _startupPending = false;
+                        _autoPauseArmed = false;
+                        _wasBlocked = false;
+                        break;
+                    }
 
-                break;
+                    // Stay armed until the start actually succeeds. If it returns false (e.g. a
+                    // window opened during the wait), keep _startupPending so the next tick retries.
+                    _startupPending = true;
+                    _autoPauseArmed = false;
+                    _wasBlocked = false;
+                    var started = await startPendingPlayback();
+                    if (started)
+                    {
+                        _startupPending = false;
+                        _autoPauseArmed = false;
+                        _wasBlocked = false;
+                    }
+                    else
+                    {
+                        ApplicationLog.Write("xy-diag fgp=start-deferred");
+                    }
+                    break;
+
+                default:
+                    if (isBlocked || canStartOrResume)
+                    {
+                        _wasBlocked = isBlocked;
+                    }
+
+                    if (wallpaperMode &&
+                        _wasBlocked &&
+                        !isBlocked &&
+                        _autoPauseArmed &&
+                        !foregroundAllowsWallpaperResume &&
+                        !_deniedLogged)
+                    {
+                        _deniedLogged = true;
+                        ApplicationLog.Write(
+                            $"xy-diag fgp=resume-denied {foregroundDetail}");
+                    }
+
+                    break;
+            }
+
+            LastError = null;
+            RecordDiagnostic(trigger, action, result);
         }
-
-        LastError = null;
-        RecordDiagnostic(trigger, action, result);
+        catch (Exception exception)
+        {
+            ApplicationLog.Write($"xy-diag fgp-evaluate-error trigger={trigger}: {exception}");
+            throw;
+        }
     }
 
     private void RecordDiagnostic(
@@ -280,11 +400,28 @@ internal sealed class ForegroundPlaybackController : IDisposable
             request);
     }
 
+    /// <summary>
+    /// Runs a script through the direct WebView2 channel instead of the CDP queue, so it can
+    /// reach the page even while a long CDP evaluation (like a fade) is still in flight.
+    /// </summary>
+    private async Task RunImmediateAsync(string expression)
+    {
+        try
+        {
+            await _webView.CoreWebView2!.ExecuteScriptAsync(expression);
+        }
+        catch (Exception exception)
+        {
+            ApplicationLog.Write($"xy-diag fgp-immediate-error: {exception.Message}");
+        }
+    }
+
     private async Task ClearStoredAudioAsync()
     {
         try
         {
             await _webView.CoreWebView2!.ExecuteScriptAsync(
+                "window.__xyDesktopSetAutoPaused?.(false); " +
                 "window.__xyDesktopClearFullscreenPause?.()");
         }
         catch

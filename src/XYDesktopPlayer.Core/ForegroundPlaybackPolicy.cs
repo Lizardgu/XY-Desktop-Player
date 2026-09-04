@@ -70,7 +70,9 @@ public readonly record struct ForegroundPlaybackState(
     bool IsBlocked,
     bool AutoPauseArmed,
     bool CanStartOrResume = false,
-    bool StartupPending = false);
+    bool StartupPending = false,
+    bool WallpaperMode = false,
+    bool ForegroundAllowsWallpaperResume = false);
 
 public enum ForegroundPlaybackAction
 {
@@ -86,9 +88,13 @@ public static class ForegroundPlaybackPolicy
     {
         if (state.StartupPending)
         {
-            return !state.IsBlocked && state.CanStartOrResume
-                ? ForegroundPlaybackAction.Start
-                : ForegroundPlaybackAction.None;
+            if (!state.IsBlocked && state.CanStartOrResume &&
+                (!state.WallpaperMode || state.ForegroundAllowsWallpaperResume))
+            {
+                return ForegroundPlaybackAction.Start;
+            }
+
+            return ForegroundPlaybackAction.None;
         }
 
         if (!state.WasBlocked && state.IsBlocked)
@@ -99,7 +105,8 @@ public static class ForegroundPlaybackPolicy
         if (state.WasBlocked &&
             !state.IsBlocked &&
             state.AutoPauseArmed &&
-            state.CanStartOrResume)
+            state.CanStartOrResume &&
+            (!state.WallpaperMode || state.ForegroundAllowsWallpaperResume))
         {
             return ForegroundPlaybackAction.Resume;
         }

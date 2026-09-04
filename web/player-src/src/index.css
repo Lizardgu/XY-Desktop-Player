@@ -51,6 +51,14 @@ input:focus-visible {
   background-repeat: no-repeat;
   background-size: cover;
   transition: background-color 320ms ease-out;
+  user-select: none;
+  -webkit-user-select: none;
+  cursor: default;
+}
+
+.Main img {
+  -webkit-user-drag: none;
+  user-drag: none;
 }
 
 .Main::before {
@@ -75,11 +83,12 @@ input:focus-visible {
 .mainCanvas {
   position: absolute;
   z-index: 1;
-  top: 0;
+  top: 6px; /* 音响跳动条垂直位置:想再往下移就增大该值(单位 px) */
   right: 0;
   left: 0;
   margin: 0 auto;
   text-align: center;
+  pointer-events: none; /* 跳动条不拦截任何鼠标点击 */
 }
 
 .mainImage {

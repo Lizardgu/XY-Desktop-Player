@@ -80,6 +80,11 @@ internal static class WallpaperEngineShim
           const fadeDurationMilliseconds = {{FadeDurationMilliseconds}};
           window.__xyDesktopFadeDurationMs = fadeDurationMilliseconds;
           window.__xyDesktopLastFadeElapsedMs = 0;
+          let autoPauseRequested = false;
+
+          window.__xyDesktopSetAutoPauseRequested = function setAutoPauseRequested(value) {
+            autoPauseRequested = value === true;
+          };
 
           function resetMasterGain() {
             if (!masterGain || !audioContext) return;
@@ -93,6 +98,7 @@ internal static class WallpaperEngineShim
           }
 
           window.__xyDesktopPauseForFullscreen = async function pauseForFullscreen() {
+            if (!autoPauseRequested) return fullscreenPausedAudio.size;
             const candidates = trackedAudio.filter(audio => audio && !audio.paused && !audio.ended);
             if (candidates.length === 0) return fullscreenPausedAudio.size;
 
@@ -110,6 +116,11 @@ internal static class WallpaperEngineShim
 
             await waitForFade();
             if (generation !== fadeGeneration) return fullscreenPausedAudio.size;
+            if (!autoPauseRequested) {
+              // The user returned to the desktop while the fade was running: undo it
+              // instead of pausing. The resume path already restored the master gain.
+              return fullscreenPausedAudio.size;
+            }
             window.__xyDesktopLastFadeElapsedMs = performance.now() - fadeStartedAt;
             for (const audio of candidates) {
               if (audio && trackedAudio.includes(audio) && !audio.paused && !audio.ended) {
@@ -122,6 +133,7 @@ internal static class WallpaperEngineShim
           };
 
           window.__xyDesktopResumeAfterFullscreen = async function resumeAfterFullscreen() {
+            autoPauseRequested = false;
             fadeGeneration += 1;
             resetMasterGain();
             const pausedByFullscreen = Array.from(fullscreenPausedAudio);
@@ -137,7 +149,43 @@ internal static class WallpaperEngineShim
             return resumed;
           };
 
+          // Manual pause from the player button: same 500ms fade-out as the window-switch
+          // pause, but the paused audio is NOT tracked for automatic resume.
+          window.__xyDesktopFadeStop = async function fadeStop() {
+            const candidates = trackedAudio.filter(audio => audio && !audio.paused && !audio.ended);
+            if (candidates.length === 0) return 0;
+
+            const generation = ++fadeGeneration;
+            if (ensureAudioGraph() && masterGain && audioContext) {
+              if (audioContext.state === 'suspended') {
+                try { await audioContext.resume(); } catch (_) {}
+              }
+              const now = audioContext.currentTime;
+              masterGain.gain.cancelScheduledValues(now);
+              masterGain.gain.setValueAtTime(masterGain.gain.value, now);
+              masterGain.gain.linearRampToValueAtTime(0, now + fadeDurationMilliseconds / 1000);
+            }
+
+            await waitForFade();
+            if (generation !== fadeGeneration) return 0;
+            for (const audio of candidates) {
+              if (audio && trackedAudio.includes(audio) && !audio.paused && !audio.ended) {
+                audio.pause();
+              }
+            }
+            resetMasterGain();
+            return candidates.length;
+          };
+
+          // Called before any user-requested playback so a cancelled or finished fade never
+          // leaves the master gain at zero.
+          window.__xyDesktopPrepareManualResume = function prepareManualResume() {
+            fadeGeneration += 1;
+            resetMasterGain();
+          };
+
           window.__xyDesktopClearFullscreenPause = function clearFullscreenPause() {
+            autoPauseRequested = false;
             fadeGeneration += 1;
             resetMasterGain();
             fullscreenPausedAudio.clear();

@@ -123,6 +123,11 @@ internal static class StartupPlaybackService
                 return true;
             }
 
+            if (value.ValueKind == JsonValueKind.False)
+            {
+                return false;
+            }
+
             if (value.ValueKind == JsonValueKind.String)
             {
                 var text = value.GetString();
@@ -131,7 +136,7 @@ internal static class StartupPlaybackService
                     return true;
                 }
 
-                // The shim returns an object like { started: boolean, source: string }.
+                // Older page shims returned the object as a JSON string.
                 if (!string.IsNullOrEmpty(text) &&
                     text.StartsWith("{", StringComparison.Ordinal))
                 {
@@ -139,6 +144,16 @@ internal static class StartupPlaybackService
                     return inner.RootElement.TryGetProperty("started", out var started) &&
                            started.ValueKind == JsonValueKind.True;
                 }
+
+                return false;
+            }
+
+            // Runtime.evaluate with returnByValue returns objects as structured JSON:
+            // { started: boolean, source: string, error: string }.
+            if (value.ValueKind == JsonValueKind.Object)
+            {
+                return value.TryGetProperty("started", out var started) &&
+                       started.ValueKind == JsonValueKind.True;
             }
 
             return false;

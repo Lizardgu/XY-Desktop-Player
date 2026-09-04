@@ -35,6 +35,9 @@ internal sealed class DesktopInteractionController : IDisposable
     public string? LastError =>
         _mouseObserver.LastError ?? _iconMaskProvider.LastError ?? _pointerSink.LastError;
 
+    /// <summary>空白桌面区域收到左键点击(已转发给播放器)时触发,用于“点一下桌面继续播放”。</summary>
+    public event Action? BlankAreaLeftClicked;
+
     public bool Start()
     {
         ObjectDisposedException.ThrowIf(_disposed, this);
@@ -92,6 +95,12 @@ internal sealed class DesktopInteractionController : IDisposable
             DesktopPointerAction.DismissMenuForwardAndConsume)
         {
             _pointerSink.Enqueue(pointerEvent);
+        }
+
+        if (pointerEvent.Kind == DesktopPointerEventKind.LeftDown &&
+            action is DesktopPointerAction.ForwardAndConsume or DesktopPointerAction.DismissMenuForwardAndConsume)
+        {
+            BlankAreaLeftClicked?.Invoke();
         }
 
         return action;

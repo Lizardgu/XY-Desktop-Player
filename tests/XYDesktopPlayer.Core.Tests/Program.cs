@@ -112,8 +112,30 @@ Run("player and selected theme use separate virtual HTTPS hosts", () =>
     var themeMapping = ThemeWebContentMapping.Create(theme);
 
     Expect.Equal("xydesktop.local", playerMapping.VirtualHostName);
-    Expect.Equal("theme.xydesktop.local", themeMapping.VirtualHostName);
+    Expect.Equal("theme-warm-nikki.xydesktop.local", themeMapping.VirtualHostName);
     Expect.Equal(Path.GetFullPath(themeRoot), themeMapping.ResolvedAssetRoot);
+});
+
+Run("each theme gets an isolated virtual host used by its media URLs", () =>
+{
+    using var directory = new TemporaryDirectory("isolated-theme-hosts");
+    var bocchiRoot = directory.CreateThemeFixture("bocchi", "bocchi", "孤独摇滚");
+    var zzzRoot = directory.CreateThemeFixture("zzz", "zenless-zone-zero", "绝区零");
+    var bocchi = ThemePackLoader.Load(bocchiRoot, bocchiRoot, isBuiltIn: true).Theme!;
+    var zzz = ThemePackLoader.Load(zzzRoot, zzzRoot, isBuiltIn: false).Theme!;
+
+    var bocchiMapping = ThemeWebContentMapping.Create(bocchi);
+    var zzzMapping = ThemeWebContentMapping.Create(zzz);
+    var bocchiPayload = ThemeRuntimePayloadFactory.Create(bocchi, bocchiMapping.VirtualHostName);
+    var zzzPayload = ThemeRuntimePayloadFactory.Create(zzz, zzzMapping.VirtualHostName);
+
+    Expect.Equal("theme-bocchi.xydesktop.local", bocchiMapping.VirtualHostName);
+    Expect.Equal("theme-zenless-zone-zero.xydesktop.local", zzzMapping.VirtualHostName);
+    Expect.False(
+        string.Equals(bocchiMapping.VirtualHostName, zzzMapping.VirtualHostName, StringComparison.Ordinal),
+        "different themes must not share a virtual host");
+    Expect.Contains("https://theme-bocchi.xydesktop.local/audio/", bocchiPayload.Songs[0].Audio);
+    Expect.Contains("https://theme-zenless-zone-zero.xydesktop.local/images/covers/", zzzPayload.Songs[0].Cover);
 });
 
 Run("theme menu checks only the selected theme and marks built in", () =>
@@ -521,6 +543,17 @@ Run("blank desktop left click is forwarded and consumed", () =>
     Expect.Equal(DesktopPointerAction.ForwardAndConsume, DesktopPointerRoutePolicy.Decide(context));
 });
 
+Run("blank desktop left button release is forwarded without blocking Explorer", () =>
+{
+    var context = WallpaperPointer(
+        DesktopPointerEventKind.LeftUp,
+        new DesktopPoint(500, 500),
+        new DesktopIconMask(true, [new DesktopRectangle(0, 0, 80, 100)]));
+
+    // Explorer 拖动图标会在空白处松开鼠标;LeftUp 若被吞掉,拖拽无法完成。
+    Expect.Equal(DesktopPointerAction.Forward, DesktopPointerRoutePolicy.Decide(context));
+});
+
 Run("blank desktop left click dismisses an open Explorer menu before forwarding", () =>
 {
     var context = WallpaperPointer(
@@ -780,6 +813,59 @@ Run("taskbar focus does not resume an automatically paused session", () =>
             CanStartOrResume: false));
 
     Expect.Equal(ForegroundPlaybackAction.None, action);
+});
+
+Run("wallpaper mode does not resume on its own tray or window focus", () =>
+{
+    var action = ForegroundPlaybackPolicy.Decide(
+        new ForegroundPlaybackState(
+            WasBlocked: true,
+            IsBlocked: false,
+            AutoPauseArmed: true,
+            CanStartOrResume: true,
+            WallpaperMode: true,
+            ForegroundAllowsWallpaperResume: false));
+
+    Expect.Equal(ForegroundPlaybackAction.None, action);
+});
+
+Run("wallpaper mode resumes only when the desktop itself is focused", () =>
+{
+    var action = ForegroundPlaybackPolicy.Decide(
+        new ForegroundPlaybackState(
+            WasBlocked: true,
+            IsBlocked: false,
+            AutoPauseArmed: true,
+            CanStartOrResume: true,
+            WallpaperMode: true,
+            ForegroundAllowsWallpaperResume: true));
+
+    Expect.Equal(ForegroundPlaybackAction.Resume, action);
+});
+
+Run("wallpaper pending autoplay waits for real desktop focus", () =>
+{
+    var trayAction = ForegroundPlaybackPolicy.Decide(
+        new ForegroundPlaybackState(
+            WasBlocked: true,
+            IsBlocked: false,
+            AutoPauseArmed: false,
+            CanStartOrResume: true,
+            StartupPending: true,
+            WallpaperMode: true,
+            ForegroundAllowsWallpaperResume: false));
+    var desktopAction = ForegroundPlaybackPolicy.Decide(
+        new ForegroundPlaybackState(
+            WasBlocked: true,
+            IsBlocked: false,
+            AutoPauseArmed: false,
+            CanStartOrResume: true,
+            StartupPending: true,
+            WallpaperMode: true,
+            ForegroundAllowsWallpaperResume: true));
+
+    Expect.Equal(ForegroundPlaybackAction.None, trayAction);
+    Expect.Equal(ForegroundPlaybackAction.Start, desktopAction);
 });
 
 Run("startup stays silent while another application is in front", () =>

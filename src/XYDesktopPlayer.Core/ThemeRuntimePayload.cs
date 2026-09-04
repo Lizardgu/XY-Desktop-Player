@@ -42,7 +42,7 @@ public static class ThemeRuntimePayloadFactory
 
     public static ThemeRuntimePayload Create(
         ThemePack theme,
-        string themeHostName = "theme.xydesktop.local")
+        string themeHostName)
     {
         ArgumentNullException.ThrowIfNull(theme);
         ValidateHostName(themeHostName);
